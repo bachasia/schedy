@@ -45,7 +45,7 @@ A modern, full-featured social media scheduling application built with Next.js 1
 
 ### Prerequisites
 - Node.js 18+
-- Redis (for queue management)
+- **Redis** (required for queue management - [Setup Guide](./REDIS_SETUP.md))
 
 ### Setup
 
@@ -90,7 +90,32 @@ npx prisma generate
 npx prisma migrate dev
 ```
 
-5. **Start development server**
+5. **Start Redis** (required for queue functionality)
+
+See [Redis Setup Guide](./REDIS_SETUP.md) for detailed instructions.
+
+Quick start:
+```bash
+# Windows (WSL2)
+sudo service redis-server start
+
+# macOS
+brew services start redis
+
+# Linux
+sudo systemctl start redis-server
+
+# Docker
+docker run -d -p 6379:6379 --name schedy-redis redis:latest
+```
+
+Verify Redis is running:
+```bash
+redis-cli ping
+# Should return: PONG
+```
+
+6. **Start development server**
 ```bash
 npm run dev
 ```
@@ -106,6 +131,7 @@ Detailed documentation is available in the repository:
 - [Queue Management](./QUEUE_MANAGEMENT.md)
 - [Scheduling Functionality](./SCHEDULING_FUNCTIONALITY.md)
 - [Calendar View](./CALENDAR_VIEW.md)
+- [Redis Setup Guide](./REDIS_SETUP.md) ⚠️ **Important**
 - [Troubleshooting](./TROUBLESHOOTING.md)
 
 ## 🎯 Quick Start Guides

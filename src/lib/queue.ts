@@ -277,7 +277,7 @@ async function publishToTikTok(
 }
 
 /**
- * Add a post to the publishing queue
+ * Add a post to the publishing queue with timeout
  * @param postId - ID of the post to publish
  * @param userId - ID of the user who owns the post
  * @param scheduledAt - When to publish the post (optional, defaults to immediate)
@@ -292,19 +292,38 @@ export async function addPostToQueue(
     ? Math.max(0, scheduledAt.getTime() - Date.now())
     : 0;
 
-  const job = await socialPostsQueue.add(
-    { postId, userId },
-    {
-      delay,
-      jobId: `post-${postId}`, // Use post ID as job ID for easy lookup
-    },
-  );
+  // Add timeout to prevent hanging if Redis is down
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(
+        "Queue operation timed out. Please ensure Redis is running and accessible. " +
+        `Check connection at ${redisConfig.host}:${redisConfig.port}`
+      ));
+    }, 5000); // 5 second timeout
+  });
 
-  console.log(
-    `[Queue] Added post ${postId} to queue (job ID: ${job.id}, delay: ${delay}ms)`,
-  );
+  try {
+    const job = await Promise.race([
+      socialPostsQueue.add(
+        { postId, userId },
+        {
+          delay,
+          jobId: `post-${postId}`, // Use post ID as job ID for easy lookup
+        },
+      ),
+      timeoutPromise
+    ]);
 
-  return job.id?.toString() || "";
+    console.log(
+      `[Queue] Added post ${postId} to queue (job ID: ${job.id}, delay: ${delay}ms)`,
+    );
+
+    return job.id?.toString() || "";
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown queue error";
+    console.error(`[Queue] Failed to add post ${postId} to queue:`, errorMessage);
+    throw new Error(`Queue error: ${errorMessage}`);
+  }
 }
 
 /**

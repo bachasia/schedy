@@ -182,7 +182,7 @@ export default function NewPostPage() {
 
       const status = scheduledAt ? "SCHEDULED" : "PUBLISHED";
 
-      await axios.post("/api/posts", {
+      const response = await axios.post("/api/posts", {
         content,
         profileIds: selectedProfileIds,
         mediaUrls,
@@ -190,6 +190,18 @@ export default function NewPostPage() {
         status,
         scheduledAt: scheduledAt ? scheduledAt.toISOString() : undefined,
       });
+
+      // Check queue status
+      const queueStatus = response.data.queueStatus;
+      if (queueStatus?.error) {
+        // Queue failed but post was created
+        alert(
+          `⚠️ Post Created with Warning\n\n` +
+          `${queueStatus.message}\n\n` +
+          `${queueStatus.action}\n\n` +
+          `Details: ${queueStatus.details}`
+        );
+      }
 
       router.push("/posts");
     } catch (error: any) {

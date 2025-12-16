@@ -136,36 +136,68 @@ export async function POST(request: Request) {
   // Add posts to queue if scheduled or set to publish immediately
   // Wrapped in try-catch to handle Redis/queue errors gracefully
   console.log("[API] POST /api/posts - Adding posts to queue...");
+  let queueError = null;
+  
   try {
     for (const post of validPosts) {
       if (post.status === "SCHEDULED" && post.scheduledAt) {
         // Add to queue with delay
         await addPostToQueue(post.id, session.user.id, post.scheduledAt);
-        console.log(`Added scheduled post ${post.id} to queue for ${post.scheduledAt}`);
+        console.log(`[API] Added scheduled post ${post.id} to queue for ${post.scheduledAt}`);
       } else if (post.status === "PUBLISHED") {
         // Add to queue for immediate processing
         await addPostToQueue(post.id, session.user.id);
-        console.log(`Added post ${post.id} to queue for immediate publishing`);
+        console.log(`[API] Added post ${post.id} to queue for immediate publishing`);
       }
     }
-  } catch (queueError) {
+    console.log("[API] POST /api/posts - Successfully added all posts to queue");
+  } catch (error) {
     // Log queue error but don't fail the post creation
-    console.error("Failed to add posts to queue:", queueError);
+    queueError = error;
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[API] Failed to add posts to queue:", errorMessage);
     console.warn(
-      "Posts were created successfully but not added to queue. " +
+      "[API] Posts were created successfully but not added to queue. " +
       "Make sure Redis is running for queue functionality."
     );
     
-    // If posts are PUBLISHED status but couldn't be queued, update to FAILED
+    // If posts are PUBLISHED status but couldn't be queued, update to DRAFT so user can retry
     if (validPosts.some(p => p.status === "PUBLISHED")) {
       console.error(
-        "WARNING: Posts with PUBLISHED status could not be queued. " +
-        "They will need to be manually retried."
+        "[API] WARNING: Posts with PUBLISHED status could not be queued. " +
+        "Updating status to DRAFT for manual retry."
+      );
+      
+      // Update posts to DRAFT status
+      await Promise.all(
+        validPosts
+          .filter(p => p.status === "PUBLISHED")
+          .map(p => 
+            prisma.post.update({
+              where: { id: p.id },
+              data: { 
+                status: "DRAFT",
+                errorMessage: "Failed to queue: " + errorMessage 
+              }
+            })
+          )
       );
     }
   }
 
-    return NextResponse.json({ posts: validPosts }, { status: 201 });
+    // Return response with queue status
+    return NextResponse.json({ 
+      posts: validPosts,
+      queueStatus: queueError ? {
+        error: true,
+        message: "Posts created but queue is unavailable. Redis may not be running.",
+        details: queueError instanceof Error ? queueError.message : "Unknown error",
+        action: "Posts have been saved as drafts. Please retry publishing when Redis is available."
+      } : {
+        error: false,
+        message: "Posts successfully queued for publishing"
+      }
+    }, { status: 201 });
   } catch (error) {
     console.error("Error creating posts:", error);
     
