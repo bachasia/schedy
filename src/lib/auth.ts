@@ -21,15 +21,23 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
+        // Extract and type-narrow email and password
+        const email = typeof credentials.email === "string" ? credentials.email : null;
+        const password = typeof credentials.password === "string" ? credentials.password : null;
+
+        if (!email || !password) {
+          return null;
+        }
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email },
         });
 
         if (!user || !user.password) {
           return null;
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
           return null;
         }
