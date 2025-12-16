@@ -6,6 +6,10 @@ import {
   publishToInstagram as publishToInstagramAPI,
   handleFacebookError,
 } from "@/lib/social/facebook";
+import {
+  publishToTikTok as publishToTikTokAPI,
+  handleTikTokError,
+} from "@/lib/social/tiktok";
 
 // Redis connection configuration from environment variables
 const redisConfig = {
@@ -162,7 +166,7 @@ async function publishToSocialMedia(
         return await publishToTwitter(content, mediaUrls);
 
       case "TIKTOK":
-        return await publishToTikTok(content, mediaUrls);
+        return await publishToTikTok(post.id, profile.id, content, mediaUrls);
 
       default:
         throw new Error(`Unsupported platform: ${platform}`);
@@ -171,6 +175,9 @@ async function publishToSocialMedia(
     // Handle platform-specific errors
     if (platform === "FACEBOOK" || platform === "INSTAGRAM") {
       const errorMessage = handleFacebookError(error);
+      throw new Error(errorMessage);
+    } else if (platform === "TIKTOK") {
+      const errorMessage = handleTikTokError(error);
       throw new Error(errorMessage);
     }
     throw error;
@@ -263,25 +270,36 @@ async function publishToTwitter(
 }
 
 /**
- * TikTok API integration (placeholder)
+ * TikTok API integration
  */
 async function publishToTikTok(
+  postId: string,
+  profileId: string,
   content: string,
   mediaUrls: string,
-  accessToken: string,
 ): Promise<{ platformPostId: string; metadata?: any }> {
-  // TODO: Implement TikTok API call
-  console.log(`[TikTok] Publishing video with caption: "${content.substring(0, 50)}..."`);
+  console.log(`[TikTok] Publishing post ${postId} to profile ${profileId}`);
 
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  // Parse media URLs
+  const mediaArray = mediaUrls ? mediaUrls.split(",").filter(Boolean) : [];
 
-  return {
-    platformPostId: `tt_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-    metadata: {
-      platform: "tiktok",
-      publishedAt: new Date().toISOString(),
-    },
-  };
+  if (mediaArray.length === 0) {
+    throw new Error("TikTok posts require at least one video file");
+  }
+
+  // TikTok only supports single video
+  if (mediaArray.length > 1) {
+    console.warn(`[TikTok] Multiple media files provided, using first video only`);
+  }
+
+  const videoUrl = mediaArray[0];
+
+  // Call real TikTok API
+  const result = await publishToTikTokAPI(profileId, postId, content, videoUrl);
+
+  console.log(`[TikTok] Successfully published to TikTok. Publish ID: ${result.platformPostId}`);
+
+  return result;
 }
 
 /**
