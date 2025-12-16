@@ -14,11 +14,14 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Extract userId for TypeScript type narrowing
+  const userId = session.user.id;
+
   try {
     // Find all posts with PUBLISHED status but no publishedAt date
     const stuckPosts = await prisma.post.findMany({
       where: {
-        userId: session.user.id,
+        userId: userId,
         status: "PUBLISHED",
         publishedAt: null,
       },
@@ -52,7 +55,7 @@ export async function POST() {
         });
 
         // Add to queue for immediate processing
-        const jobId = await addPostToQueue(post.id, session.user.id);
+        const jobId = await addPostToQueue(post.id, userId);
         
         console.log(`[Retry] Queued post ${post.id} (job: ${jobId})`);
         
@@ -88,4 +91,7 @@ export async function POST() {
     );
   }
 }
+
+
+
 
