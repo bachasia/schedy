@@ -62,12 +62,20 @@ socialPostsQueue.process(async (job) => {
       throw new Error(`User ${userId} does not own post ${postId}`);
     }
 
-    // Check if post is in correct status
-    if (post.status !== PostStatus.SCHEDULED) {
+    // Check if post is in correct status for publishing
+    if (post.status !== PostStatus.SCHEDULED && post.status !== PostStatus.PUBLISHED) {
       console.log(
-        `[Queue] Post ${postId} is not scheduled (status: ${post.status}), skipping`,
+        `[Queue] Post ${postId} cannot be published (status: ${post.status}), skipping`,
       );
-      return { skipped: true, reason: "Post is not scheduled" };
+      return { skipped: true, reason: `Post status is ${post.status}` };
+    }
+
+    // If already published, skip
+    if (post.publishedAt) {
+      console.log(
+        `[Queue] Post ${postId} already published at ${post.publishedAt}, skipping`,
+      );
+      return { skipped: true, reason: "Post already published" };
     }
 
     // 2. Update status to PUBLISHING
