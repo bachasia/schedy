@@ -181,6 +181,51 @@ Detailed documentation is available in the repository:
 - [Scheduling Quick Start](./SCHEDULING_QUICK_START.md)
 - [Calendar Quick Start](./CALENDAR_QUICK_START.md)
 
+## 🚢 Production Deployment
+
+Deploy to VPS with Docker in 10 minutes!
+
+### Quick Deploy
+
+```bash
+# 1. Install Docker on VPS
+curl -fsSL https://get.docker.com | sh
+
+# 2. Clone repository
+git clone https://github.com/bachasia/schedy.git
+cd schedy
+
+# 3. Configure environment
+cp env.production.example .env.production
+nano .env.production  # Fill in your credentials
+
+# 4. Deploy
+chmod +x deploy.sh
+./deploy.sh build
+./deploy.sh up
+```
+
+### Deployment Guides
+
+- **[Quick Deployment](./DEPLOYMENT_QUICK.md)** - Deploy in 10 minutes
+- **[Complete Deployment Guide](./DEPLOYMENT.md)** - Detailed instructions
+  - VPS setup & requirements
+  - Docker installation
+  - SSL certificate setup
+  - Monitoring & maintenance
+  - Troubleshooting
+
+### Deployment Features
+
+- ✅ **Docker containerization** - Easy deployment and scaling
+- ✅ **Multi-stage builds** - Optimized production images
+- ✅ **Nginx reverse proxy** - SSL termination and caching
+- ✅ **Health checks** - Automatic restart on failure
+- ✅ **Volume persistence** - Data survives container restarts
+- ✅ **One-command deployment** - Simple deploy script
+- ✅ **Backup & restore** - Database backup utilities
+- ✅ **SSL support** - Let's Encrypt integration
+
 ## 🏗️ Project Structure
 
 ```

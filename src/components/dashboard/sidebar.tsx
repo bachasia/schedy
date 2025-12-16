@@ -59,7 +59,7 @@ export function Sidebar({ userName }: SidebarProps) {
                 className={cn(
                   "flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
                   active &&
-                    "bg-zinc-900 text-zinc-50 shadow-sm hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900",
+                    "bg-zinc-900 text-zinc-50 shadow-sm hover:bg-zinc-900 hover:text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:text-zinc-900",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function Sidebar({ userName }: SidebarProps) {
                   className={cn(
                     "flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
                     active &&
-                      "bg-zinc-900 text-zinc-50 shadow-sm hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900",
+                      "bg-zinc-900 text-zinc-50 shadow-sm hover:bg-zinc-900 hover:text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:text-zinc-900",
                   )}
                   onClick={() => setOpen(false)}
                 >

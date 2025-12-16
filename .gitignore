@@ -44,3 +44,10 @@ next-env.d.ts
 
 # uploaded media files
 /public/uploads
+
+# deployment
+backups/
+certbot/
+.env.production
+docker-compose.override.yml
+*.backup
