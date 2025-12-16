@@ -20,6 +20,8 @@ COPY . .
 # Set environment for build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# Disable Turbopack to use webpack (required for Bull compatibility)
+ENV NEXT_PRIVATE_SKIP_TURBO=1
 
 # Generate Prisma Client (DATABASE_URL not needed for generate, but required by config)
 ENV DATABASE_URL="file:./prisma/dev.db"
