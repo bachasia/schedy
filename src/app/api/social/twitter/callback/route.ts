@@ -43,6 +43,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(errorUrl);
     }
 
+    // Extract userId for TypeScript type narrowing
+    const userId = session.user.id;
+
     // Verify state and get code verifier
     const storedState = await prisma.$queryRaw<Array<{
       codeVerifier: string;
@@ -50,7 +53,7 @@ export async function GET(request: NextRequest) {
     }>>`
       SELECT codeVerifier, expiresAt
       FROM OAuthState
-      WHERE userId = ${session.user.id}
+      WHERE userId = ${userId}
         AND state = ${state}
         AND platform = 'TWITTER'
         AND expiresAt > datetime('now')
@@ -81,46 +84,56 @@ export async function GET(request: NextRequest) {
     // Store or update profile in database
     console.log(`[Twitter] Saving profile for user ${userInfo.username}...`);
     
-    await prisma.profile.upsert({
+    // Check if profile already exists for this user
+    const existingProfile = await prisma.profile.findFirst({
       where: {
-        userId_platform_platformUserId: {
-          userId: session.user.id,
-          platform: "TWITTER",
-          platformUserId: userInfo.id,
-        },
-      },
-      create: {
-        userId: session.user.id,
-        name: userInfo.name,
+        userId: userId,
         platform: "TWITTER",
         platformUserId: userInfo.id,
-        platformUsername: userInfo.username,
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token || null,
-        tokenExpiresAt: tokenExpiresAt,
-        isActive: true,
-        metadata: JSON.stringify({
-          profileImageUrl: userInfo.profile_image_url,
-        }),
-      },
-      update: {
-        name: userInfo.name,
-        platformUsername: userInfo.username,
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token || null,
-        tokenExpiresAt: tokenExpiresAt,
-        isActive: true,
-        metadata: JSON.stringify({
-          profileImageUrl: userInfo.profile_image_url,
-        }),
-        updatedAt: new Date(),
       },
     });
+
+    if (existingProfile) {
+      // Update existing profile
+      await prisma.profile.update({
+        where: { id: existingProfile.id },
+        data: {
+          name: userInfo.name,
+          platformUsername: userInfo.username,
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token || null,
+          tokenExpiresAt: tokenExpiresAt,
+          isActive: true,
+          metadata: JSON.stringify({
+            profileImageUrl: userInfo.profile_image_url,
+          }),
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      // Create new profile
+      await prisma.profile.create({
+        data: {
+          userId: userId,
+          name: userInfo.name,
+          platform: "TWITTER",
+          platformUserId: userInfo.id,
+          platformUsername: userInfo.username,
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token || null,
+          tokenExpiresAt: tokenExpiresAt,
+          isActive: true,
+          metadata: JSON.stringify({
+            profileImageUrl: userInfo.profile_image_url,
+          }),
+        },
+      });
+    }
 
     // Clean up OAuth state
     await prisma.$executeRaw`
       DELETE FROM OAuthState
-      WHERE userId = ${session.user.id}
+      WHERE userId = ${userId}
         AND state = ${state}
     `;
 
