@@ -102,4 +102,18 @@ model Post {
   @@unique([platform, platformPostId], map: "ux_post_platform_post_id")
 }
 
+model OAuthState {
+  id           String    @id @default(cuid())
+  userId       String
+  state        String    @unique
+  codeVerifier String
+  platform     Platform
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, platform], map: "idx_oauth_state_user_platform")
+  @@index([state], map: "idx_oauth_state_state")
+  @@index([expiresAt], map: "idx_oauth_state_expires")
+}
+
 

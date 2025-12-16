@@ -194,8 +194,8 @@ export function ConnectProfileModal({
           </div>
         ) : (
           <div className="space-y-6">
-            {/* OAuth Connect (for Facebook, Instagram, and TikTok) */}
-            {(selectedPlatform === "FACEBOOK" || selectedPlatform === "INSTAGRAM" || selectedPlatform === "TIKTOK") && (
+            {/* OAuth Connect (for Facebook, Instagram, TikTok, and Twitter) */}
+            {(selectedPlatform === "FACEBOOK" || selectedPlatform === "INSTAGRAM" || selectedPlatform === "TIKTOK" || selectedPlatform === "TWITTER") && (
               <div className="space-y-3">
                 <div className="text-center">
                   <p className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -209,10 +209,13 @@ export function ConnectProfileModal({
                       selectedPlatform === "FACEBOOK" && "bg-blue-600 hover:bg-blue-700",
                       selectedPlatform === "INSTAGRAM" && "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700",
                       selectedPlatform === "TIKTOK" && "bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200",
+                      selectedPlatform === "TWITTER" && "bg-sky-500 hover:bg-sky-600",
                     )}
                     onClick={() => {
                       if (selectedPlatform === "TIKTOK") {
                         window.location.href = "/api/social/tiktok/connect";
+                      } else if (selectedPlatform === "TWITTER") {
+                        window.location.href = "/api/social/twitter/connect";
                       } else {
                         window.location.href = `/api/social/facebook/connect?type=${selectedPlatform.toLowerCase()}`;
                       }
@@ -222,7 +225,7 @@ export function ConnectProfileModal({
                     Connect {platformInfo?.name} via OAuth
                   </Button>
                   <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                    Secure OAuth flow - automatically imports your {selectedPlatform === "TIKTOK" ? "account" : "pages/accounts"}
+                    Secure OAuth flow - automatically imports your {selectedPlatform === "TIKTOK" || selectedPlatform === "TWITTER" ? "account" : "pages/accounts"}
                   </p>
                 </div>
                 

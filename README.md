@@ -159,17 +159,24 @@ See [scripts/README.md](./scripts/README.md) for detailed script documentation.
 
 Detailed documentation is available in the repository:
 
-- [Environment Variables](./ENVIRONMENT_VARIABLES.md)
+### Platform Integration
 - [Facebook Integration](./FACEBOOK_INTEGRATION.md)
+- [Twitter Integration](./TWITTER_INTEGRATION.md)
+
+### Core Features
 - [Queue Management](./QUEUE_MANAGEMENT.md)
 - [Scheduling Functionality](./SCHEDULING_FUNCTIONALITY.md)
 - [Calendar View](./CALENDAR_VIEW.md)
+
+### Setup & Configuration
+- [Environment Variables](./ENVIRONMENT_VARIABLES.md)
 - [Redis Setup Guide](./REDIS_SETUP.md) ⚠️ **Important**
 - [Troubleshooting](./TROUBLESHOOTING.md)
 
 ## 🎯 Quick Start Guides
 
 - [Facebook Quick Start](./FACEBOOK_QUICK_START.md)
+- [Twitter Quick Start](./TWITTER_QUICK_START.md)
 - [Queue Quick Start](./QUEUE_QUICK_START.md)
 - [Scheduling Quick Start](./SCHEDULING_QUICK_START.md)
 - [Calendar Quick Start](./CALENDAR_QUICK_START.md)

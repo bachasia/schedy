@@ -149,6 +149,41 @@ export async function exchangeTikTokCode(code: string): Promise<TikTokTokenRespo
 }
 
 /**
+ * Refresh TikTok access token using refresh token
+ * @param refreshToken - Refresh token from previous authorization
+ */
+export async function refreshTikTokAccessToken(refreshToken: string): Promise<TikTokTokenResponse> {
+  const config = getTikTokConfig();
+
+  const response = await fetch(TIKTOK_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Cache-Control": "no-cache",
+    },
+    body: new URLSearchParams({
+      client_key: config.clientKey,
+      client_secret: config.clientSecret,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to refresh TikTok token: ${error}`);
+  }
+
+  const data = await response.json();
+
+  if (data.error) {
+    throw new Error(`TikTok token refresh error: ${data.error.message || data.error}`);
+  }
+
+  return data.data;
+}
+
+/**
  * Get TikTok user information
  * @param accessToken - User's access token
  */

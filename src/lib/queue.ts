@@ -10,6 +10,11 @@ import {
   publishToTikTok as publishToTikTokAPI,
   handleTikTokError,
 } from "@/lib/social/tiktok";
+import {
+  publishToTwitter as publishToTwitterAPI,
+  handleTwitterError,
+} from "@/lib/social/twitter";
+import { ensureValidToken } from "@/lib/social/token-manager";
 
 // Redis connection configuration from environment variables
 const redisConfig = {
@@ -45,7 +50,13 @@ interface PostJobData {
 socialPostsQueue.process(async (job) => {
   const { postId, userId } = job.data as PostJobData;
 
-  console.log(`[Queue] Processing post ${postId} for user ${userId}`);
+  // Log retry attempts
+  const attemptNumber = job.attemptsMade + 1;
+  const maxAttempts = job.opts.attempts || 3;
+  
+  console.log(
+    `[Queue] Processing post ${postId} for user ${userId} (attempt ${attemptNumber}/${maxAttempts})`
+  );
 
   try {
     // 1. Load post from database with profile information
@@ -100,10 +111,21 @@ socialPostsQueue.process(async (job) => {
       throw new Error(`Profile ${profile.id} is not active`);
     }
 
-    // 4. Call appropriate social media API based on platform
+    // 4. Check and refresh token if needed (pre-publish check)
+    console.log(`[Queue] Checking token validity for profile ${profile.id}...`);
+    const tokenValid = await ensureValidToken(profile.id);
+    
+    if (!tokenValid) {
+      throw new Error(
+        `Token validation failed for profile ${profile.id}. ` +
+        `The profile may have been marked inactive. Please re-authenticate.`
+      );
+    }
+
+    // 5. Call appropriate social media API based on platform
     const result = await publishToSocialMedia(post, profile);
 
-    // 5. Handle success
+    // 6. Handle success
     await prisma.post.update({
       where: { id: postId },
       data: {
@@ -125,23 +147,49 @@ socialPostsQueue.process(async (job) => {
       publishedAt: new Date().toISOString(),
     };
   } catch (error) {
-    // 6. Handle failure
+    // 7. Handle failure
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
 
-    console.error(`[Queue] Failed to publish post ${postId}:`, errorMessage);
+    const isLastAttempt = attemptNumber >= maxAttempts;
+    
+    console.error(
+      `[Queue] Failed to publish post ${postId} (attempt ${attemptNumber}/${maxAttempts}):`,
+      errorMessage
+    );
 
-    await prisma.post.update({
-      where: { id: postId },
-      data: {
-        status: PostStatus.FAILED,
-        failedAt: new Date(),
-        errorMessage,
-        updatedAt: new Date(),
-      },
-    });
+    if (isLastAttempt) {
+      // Final failure - update post status
+      console.error(`[Queue] All retry attempts exhausted for post ${postId}`);
+      
+      await prisma.post.update({
+        where: { id: postId },
+        data: {
+          status: PostStatus.FAILED,
+          failedAt: new Date(),
+          errorMessage: `${errorMessage} (after ${maxAttempts} attempts)`,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      // Will retry - keep post in PUBLISHING status
+      const nextAttempt = attemptNumber + 1;
+      const nextDelay = Math.pow(2, attemptNumber) * 2000; // Exponential backoff: 2s, 4s, 8s
+      
+      console.log(
+        `[Queue] Will retry post ${postId} in ${nextDelay}ms (attempt ${nextAttempt}/${maxAttempts})`
+      );
+      
+      await prisma.post.update({
+        where: { id: postId },
+        data: {
+          errorMessage: `${errorMessage} (attempt ${attemptNumber}/${maxAttempts}, retrying...)`,
+          updatedAt: new Date(),
+        },
+      });
+    }
 
-    throw error; // Re-throw to mark job as failed
+    throw error; // Re-throw to mark job as failed and trigger retry
   }
 });
 
@@ -163,7 +211,7 @@ async function publishToSocialMedia(
         return await publishToInstagram(post.id, profile.id, content, mediaUrls);
 
       case "TWITTER":
-        return await publishToTwitter(content, mediaUrls);
+        return await publishToTwitter(post.id, profile.id, content, mediaUrls);
 
       case "TIKTOK":
         return await publishToTikTok(post.id, profile.id, content, mediaUrls);
@@ -178,6 +226,9 @@ async function publishToSocialMedia(
       throw new Error(errorMessage);
     } else if (platform === "TIKTOK") {
       const errorMessage = handleTikTokError(error);
+      throw new Error(errorMessage);
+    } else if (platform === "TWITTER") {
+      const errorMessage = handleTwitterError(error);
       throw new Error(errorMessage);
     }
     throw error;
@@ -246,27 +297,22 @@ async function publishToInstagram(
 }
 
 /**
- * Twitter API integration (placeholder)
+ * Twitter API integration
  */
 async function publishToTwitter(
+  postId: string,
+  profileId: string,
   content: string,
   mediaUrls: string,
-  accessToken: string,
 ): Promise<{ platformPostId: string; metadata?: any }> {
-  // TODO: Implement Twitter API v2 call
-  console.log(
-    `[Twitter] Publishing: "${content.substring(0, 50)}..." (${content.length} chars)`,
-  );
+  console.log(`[Twitter] Publishing post ${postId} to profile ${profileId}`);
 
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  // Call real Twitter API
+  const result = await publishToTwitterAPI(profileId, postId, content, mediaUrls);
 
-  return {
-    platformPostId: `tw_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-    metadata: {
-      platform: "twitter",
-      publishedAt: new Date().toISOString(),
-    },
-  };
+  console.log(`[Twitter] Successfully published to Twitter. Tweet ID: ${result.platformPostId}`);
+
+  return result;
 }
 
 /**
@@ -457,17 +503,146 @@ export async function cleanOldJobs() {
   console.log(`[Queue] Cleaned jobs older than 24 hours`);
 }
 
+/**
+ * Manually publish a post immediately (bypass queue, for testing/admin)
+ * @param postId - ID of the post to publish
+ * @returns Result of publishing attempt
+ */
+export async function publishPostImmediately(postId: string): Promise<{
+  success: boolean;
+  platformPostId?: string;
+  error?: string;
+}> {
+  console.log(`[Queue] Manually publishing post ${postId} immediately`);
+
+  try {
+    // Load post with profile
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        profile: true,
+      },
+    });
+
+    if (!post) {
+      throw new Error(`Post ${postId} not found`);
+    }
+
+    if (!post.profile.isActive) {
+      throw new Error(`Profile ${post.profile.id} is not active`);
+    }
+
+    // Update status to PUBLISHING
+    await prisma.post.update({
+      where: { id: postId },
+      data: {
+        status: PostStatus.PUBLISHING,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Publish to social media
+    const result = await publishToSocialMedia(post, post.profile);
+
+    // Update to PUBLISHED
+    await prisma.post.update({
+      where: { id: postId },
+      data: {
+        status: PostStatus.PUBLISHED,
+        publishedAt: new Date(),
+        platformPostId: result.platformPostId,
+        metadata: result.metadata || {},
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log(
+      `[Queue] Successfully published post ${postId} immediately (platform ID: ${result.platformPostId})`
+    );
+
+    return {
+      success: true,
+      platformPostId: result.platformPostId,
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+
+    console.error(`[Queue] Failed to publish post ${postId} immediately:`, errorMessage);
+
+    // Update to FAILED
+    await prisma.post.update({
+      where: { id: postId },
+      data: {
+        status: PostStatus.FAILED,
+        failedAt: new Date(),
+        errorMessage,
+        updatedAt: new Date(),
+      },
+    });
+
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
 // Event listeners for monitoring
 socialPostsQueue.on("completed", (job, result) => {
-  console.log(`[Queue] Job ${job.id} completed:`, result);
+  const attemptsMade = job.attemptsMade;
+  if (attemptsMade > 1) {
+    console.log(
+      `[Queue] Job ${job.id} completed after ${attemptsMade} attempts:`,
+      result
+    );
+  } else {
+    console.log(`[Queue] Job ${job.id} completed:`, result);
+  }
 });
 
 socialPostsQueue.on("failed", (job, error) => {
-  console.error(`[Queue] Job ${job?.id} failed:`, error.message);
+  if (job) {
+    const attemptsMade = job.attemptsMade;
+    const maxAttempts = job.opts.attempts || 3;
+    const willRetry = attemptsMade < maxAttempts;
+    
+    if (willRetry) {
+      console.warn(
+        `[Queue] Job ${job.id} failed (attempt ${attemptsMade}/${maxAttempts}), will retry:`,
+        error.message
+      );
+    } else {
+      console.error(
+        `[Queue] Job ${job.id} failed after ${attemptsMade} attempts (final):`,
+        error.message
+      );
+    }
+  } else {
+    console.error(`[Queue] Job failed:`, error.message);
+  }
 });
 
 socialPostsQueue.on("stalled", (job) => {
-  console.warn(`[Queue] Job ${job.id} stalled`);
+  console.warn(
+    `[Queue] Job ${job.id} stalled (may have been picked up by another worker)`
+  );
+});
+
+socialPostsQueue.on("error", (error) => {
+  console.error("[Queue] Queue error:", error);
+});
+
+socialPostsQueue.on("waiting", (jobId) => {
+  console.log(`[Queue] Job ${jobId} is waiting to be processed`);
+});
+
+socialPostsQueue.on("active", (job) => {
+  console.log(`[Queue] Job ${job.id} is now active and being processed`);
+});
+
+socialPostsQueue.on("progress", (job, progress) => {
+  console.log(`[Queue] Job ${job.id} progress: ${progress}%`);
 });
 
 // Export queue for external use
