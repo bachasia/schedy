@@ -88,7 +88,7 @@ export async function PATCH(
 
   const updateData: {
     content?: string;
-    mediaUrls?: string[];
+    mediaUrls?: string;
     mediaType?: "IMAGE" | "VIDEO" | "CAROUSEL";
     status?: "DRAFT" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED";
     scheduledAt?: Date | null;
@@ -102,7 +102,8 @@ export async function PATCH(
   }
 
   if (parsed.data.mediaUrls !== undefined) {
-    updateData.mediaUrls = parsed.data.mediaUrls;
+    // Convert array to comma-separated string for Prisma
+    updateData.mediaUrls = parsed.data.mediaUrls.join(",");
   }
 
   if (parsed.data.mediaType !== undefined) {
