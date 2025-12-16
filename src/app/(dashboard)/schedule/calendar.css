@@ -1,0 +1,364 @@
+/* Custom styles for react-big-calendar */
+
+.calendar-container {
+  font-family: inherit;
+}
+
+/* Calendar container */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+/* Toolbar */
+.rbc-toolbar {
+  display: none; /* We use custom toolbar */
+}
+
+/* Month view */
+.rbc-month-view {
+  border: 1px solid rgb(228 228 231);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.dark .rbc-month-view {
+  border-color: rgb(39 39 42);
+}
+
+.rbc-month-row {
+  border-color: rgb(228 228 231);
+}
+
+.dark .rbc-month-row {
+  border-color: rgb(39 39 42);
+}
+
+/* Header */
+.rbc-header {
+  padding: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: rgb(63 63 70);
+  background-color: rgb(250 250 250);
+  border-bottom: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-header {
+  color: rgb(228 228 231);
+  background-color: rgb(24 24 27);
+  border-bottom-color: rgb(39 39 42);
+}
+
+.rbc-header + .rbc-header {
+  border-left: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-header + .rbc-header {
+  border-left-color: rgb(39 39 42);
+}
+
+/* Date cells */
+.rbc-date-cell {
+  padding: 0.5rem;
+  text-align: right;
+  font-size: 0.875rem;
+  color: rgb(113 113 122);
+}
+
+.dark .rbc-date-cell {
+  color: rgb(161 161 170);
+}
+
+.rbc-off-range {
+  color: rgb(212 212 216);
+}
+
+.dark .rbc-off-range {
+  color: rgb(82 82 91);
+}
+
+.rbc-today {
+  background-color: rgb(254 252 232);
+}
+
+.dark .rbc-today {
+  background-color: rgb(39 39 29);
+}
+
+/* Day cells */
+.rbc-day-bg {
+  background-color: white;
+  border-left: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-day-bg {
+  background-color: rgb(9 9 11);
+  border-left-color: rgb(39 39 42);
+}
+
+.rbc-off-range-bg {
+  background-color: rgb(250 250 250);
+}
+
+.dark .rbc-off-range-bg {
+  background-color: rgb(24 24 27);
+}
+
+.rbc-today.rbc-day-bg {
+  background-color: rgb(254 252 232);
+}
+
+.dark .rbc-today.rbc-day-bg {
+  background-color: rgb(39 39 29);
+}
+
+/* Events */
+.rbc-event {
+  padding: 2px 5px;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rbc-event:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+.rbc-event-label {
+  font-size: 0.75rem;
+}
+
+.rbc-event-content {
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Week view */
+.rbc-time-view {
+  border: 1px solid rgb(228 228 231);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.dark .rbc-time-view {
+  border-color: rgb(39 39 42);
+}
+
+.rbc-time-header {
+  background-color: rgb(250 250 250);
+  border-bottom: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-time-header {
+  background-color: rgb(24 24 27);
+  border-bottom-color: rgb(39 39 42);
+}
+
+.rbc-time-header-content {
+  border-left: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-time-header-content {
+  border-left-color: rgb(39 39 42);
+}
+
+.rbc-time-content {
+  background-color: white;
+  border-top: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-time-content {
+  background-color: rgb(9 9 11);
+  border-top-color: rgb(39 39 42);
+}
+
+.rbc-time-column {
+  background-color: white;
+}
+
+.dark .rbc-time-column {
+  background-color: rgb(9 9 11);
+}
+
+.rbc-time-slot {
+  border-top: 1px solid rgb(244 244 245);
+}
+
+.dark .rbc-time-slot {
+  border-top-color: rgb(39 39 42);
+}
+
+.rbc-current-time-indicator {
+  background-color: rgb(239 68 68);
+  height: 2px;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-left: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-day-slot .rbc-time-slot {
+  border-left-color: rgb(39 39 42);
+}
+
+.rbc-timeslot-group {
+  border-left: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-timeslot-group {
+  border-left-color: rgb(39 39 42);
+}
+
+/* Agenda view */
+.rbc-agenda-view {
+  border: 1px solid rgb(228 228 231);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.dark .rbc-agenda-view {
+  border-color: rgb(39 39 42);
+}
+
+.rbc-agenda-view table {
+  background-color: white;
+}
+
+.dark .rbc-agenda-view table {
+  background-color: rgb(9 9 11);
+}
+
+.rbc-agenda-table {
+  border-spacing: 0;
+}
+
+.rbc-agenda-date-cell,
+.rbc-agenda-time-cell {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: rgb(113 113 122);
+  border-bottom: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-agenda-date-cell,
+.dark .rbc-agenda-time-cell {
+  color: rgb(161 161 170);
+  border-bottom-color: rgb(39 39 42);
+}
+
+.rbc-agenda-event-cell {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: rgb(24 24 27);
+  border-bottom: 1px solid rgb(228 228 231);
+}
+
+.dark .rbc-agenda-event-cell {
+  color: rgb(250 250 250);
+  border-bottom-color: rgb(39 39 42);
+}
+
+/* Selected slot */
+.rbc-selected {
+  background-color: rgb(243 244 246);
+}
+
+.dark .rbc-selected {
+  background-color: rgb(39 39 42);
+}
+
+/* Show more link */
+.rbc-show-more {
+  background-color: transparent;
+  color: rgb(59 130 246);
+  font-size: 0.75rem;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.dark .rbc-show-more {
+  color: rgb(96 165 250);
+}
+
+.rbc-show-more:hover {
+  text-decoration: underline;
+}
+
+/* Overlay */
+.rbc-overlay {
+  background-color: white;
+  border: 1px solid rgb(228 228 231);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  padding: 0.5rem;
+  z-index: 10;
+}
+
+.dark .rbc-overlay {
+  background-color: rgb(24 24 27);
+  border-color: rgb(39 39 42);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+}
+
+.rbc-overlay-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem;
+  border-bottom: 1px solid rgb(228 228 231);
+  margin-bottom: 0.5rem;
+}
+
+.dark .rbc-overlay-header {
+  border-bottom-color: rgb(39 39 42);
+}
+
+/* Time gutter */
+.rbc-time-gutter {
+  background-color: rgb(250 250 250);
+}
+
+.dark .rbc-time-gutter {
+  background-color: rgb(24 24 27);
+}
+
+.rbc-label {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: rgb(113 113 122);
+}
+
+.dark .rbc-label {
+  color: rgb(161 161 170);
+}
+
+/* Allday cell */
+.rbc-allday-cell {
+  background-color: rgb(250 250 250);
+}
+
+.dark .rbc-allday-cell {
+  background-color: rgb(24 24 27);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .rbc-header {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .rbc-date-cell {
+    padding: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .rbc-event {
+    font-size: 0.625rem;
+    padding: 1px 3px;
+  }
+}
+
+

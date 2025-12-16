@@ -1,0 +1,105 @@
+generator client {
+  // Use the default Prisma Client generator so @prisma/client works out of the box
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Supported social platforms for profiles and posts
+enum Platform {
+  FACEBOOK
+  INSTAGRAM
+  TIKTOK
+  TWITTER
+}
+
+/// Type of media attached to a post
+enum MediaType {
+  IMAGE
+  VIDEO
+  CAROUSEL
+}
+
+/// Lifecycle state of a post
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  profiles      Profile[]
+  posts         Post[]
+
+  @@index([createdAt], map: "idx_user_created_at")
+}
+
+model Profile {
+  id               String    @id @default(cuid())
+  userId           String
+  name             String?
+  platform         Platform
+  platformUserId   String
+  platformUsername String?
+  accessToken      String
+  refreshToken     String?
+  tokenExpiresAt   DateTime?
+  isActive         Boolean   @default(true)
+  metadata         Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts Post[]
+
+  @@index([userId], map: "idx_profile_user_id")
+  @@index([platform, userId], map: "idx_profile_platform_user")
+  @@unique([platform, platformUserId], map: "ux_profile_platform_user_id")
+}
+
+model Post {
+  id             String      @id @default(cuid())
+  userId         String
+  profileId      String
+  content        String
+  mediaUrls      String
+  mediaType      MediaType
+  platform       Platform
+  status         PostStatus  @default(DRAFT)
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  failedAt       DateTime?
+  errorMessage   String?
+  platformPostId String?
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_post_user_id")
+  @@index([profileId], map: "idx_post_profile_id")
+  @@index([status, scheduledAt], map: "idx_post_status_scheduled_at")
+  @@index([platform, status], map: "idx_post_platform_status")
+  @@unique([platform, platformPostId], map: "ux_post_platform_post_id")
+}
+
+
