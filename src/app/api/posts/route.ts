@@ -50,7 +50,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("[API] POST /api/posts - User ID:", session.user.id);
+    // Extract userId for TypeScript type narrowing
+    const userId = session.user.id;
+
+    console.log("[API] POST /api/posts - User ID:", userId);
 
     const json = await request.json();
     console.log("[API] POST /api/posts - Request body:", JSON.stringify(json, null, 2));
@@ -84,7 +87,7 @@ export async function POST(request: Request) {
     const profiles = await prisma.profile.findMany({
     where: {
       id: { in: profileIds },
-      userId: session.user.id,
+      userId: userId,
     },
   });
 
@@ -106,7 +109,7 @@ export async function POST(request: Request) {
 
       return prisma.post.create({
         data: {
-          userId: session.user.id,
+          userId: userId,
           profileId,
           content,
           mediaUrls: mediaUrls ? mediaUrls.join(",") : "", // Convert array to comma-separated string
@@ -142,11 +145,11 @@ export async function POST(request: Request) {
     for (const post of validPosts) {
       if (post.status === "SCHEDULED" && post.scheduledAt) {
         // Add to queue with delay
-        await addPostToQueue(post.id, session.user.id, post.scheduledAt);
+        await addPostToQueue(post.id, userId, post.scheduledAt);
         console.log(`[API] Added scheduled post ${post.id} to queue for ${post.scheduledAt}`);
       } else if (post.status === "PUBLISHED") {
         // Add to queue for immediate processing
-        await addPostToQueue(post.id, session.user.id);
+        await addPostToQueue(post.id, userId);
         console.log(`[API] Added post ${post.id} to queue for immediate publishing`);
       }
     }
