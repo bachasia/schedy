@@ -90,37 +90,70 @@ npx prisma generate
 npx prisma migrate dev
 ```
 
-5. **Start Redis** (required for queue functionality)
+5. **Start development server with Redis**
 
-See [Redis Setup Guide](./REDIS_SETUP.md) for detailed instructions.
+Choose one of these options:
 
-Quick start:
+**Option 1: Auto-start with Docker (Recommended - Easiest)**
 ```bash
-# Windows (WSL2)
-sudo service redis-server start
-
-# macOS
-brew services start redis
-
-# Linux
-sudo systemctl start redis-server
-
-# Docker
-docker run -d -p 6379:6379 --name schedy-redis redis:latest
+npm run dev:docker
 ```
+This will automatically start Redis in Docker and Next.js dev server together!
 
-Verify Redis is running:
+**Option 2: Auto-start with Native Redis**
 ```bash
-redis-cli ping
-# Should return: PONG
+npm run dev:redis
 ```
+This will check/start your system Redis and Next.js dev server together.
 
-6. **Start development server**
+**Option 3: Manual Redis + Dev Server**
 ```bash
+# Start Redis first (see REDIS_SETUP.md for detailed instructions)
+# Windows (WSL2): wsl sudo service redis-server start
+# macOS: brew services start redis
+# Linux: sudo systemctl start redis-server
+# Docker: docker run -d -p 6379:6379 --name schedy-redis redis:latest
+
+# Then start dev server
 npm run dev
 ```
 
-Visit [http://localhost:3001](http://localhost:3001)
+**Verify setup:**
+```bash
+# Check Redis
+redis-cli ping
+# Should return: PONG
+
+# Check app
+# Visit http://localhost:3001
+```
+
+> 💡 **First time?** Use `npm run dev:docker` - it's the easiest!
+
+## 🎮 Available Scripts
+
+```bash
+# Development (choose one)
+npm run dev              # Next.js only (Redis must be running separately)
+npm run dev:docker       # Auto-start Redis (Docker) + Next.js ⭐ Recommended
+npm run dev:redis        # Auto-start Redis (native) + Next.js
+
+# Redis management
+npm run redis:docker     # Start Redis in Docker
+npm run redis:check      # Check/start native Redis
+npm run redis:stop       # Stop Redis Docker container
+
+# Production
+npm run build           # Build for production
+npm run start           # Start production server
+
+# Code quality
+npm run lint            # Check code with ESLint
+npm run lint:fix        # Fix ESLint errors
+npm run format          # Format code with Prettier
+```
+
+See [scripts/README.md](./scripts/README.md) for detailed script documentation.
 
 ## 📖 Documentation
 
