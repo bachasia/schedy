@@ -112,13 +112,27 @@ function startRedisLinux() {
 }
 
 function verifyRedis() {
-  exec('redis-cli ping', (error, stdout) => {
+  const platform = require('os').platform();
+  const isWindows = platform === 'win32';
+  
+  // On Windows, use Docker exec; on others, try redis-cli
+  const pingCmd = isWindows 
+    ? 'docker exec schedy-redis redis-cli ping 2>nul || wsl redis-cli ping 2>nul'
+    : 'redis-cli ping';
+  
+  exec(pingCmd, (error, stdout) => {
     if (!error && stdout.trim() === 'PONG') {
       console.log('✅ Redis is running and responding!');
       console.log('🚀 You can now use the queue functionality.\n');
     } else {
       console.log('⚠️  Redis may not be fully started yet.');
-      console.log('💡 Run "redis-cli ping" to verify manually.\n');
+      console.log('💡 Verify manually:');
+      if (isWindows) {
+        console.log('   docker exec schedy-redis redis-cli ping');
+        console.log('   or: wsl redis-cli ping\n');
+      } else {
+        console.log('   redis-cli ping\n');
+      }
     }
   });
 }

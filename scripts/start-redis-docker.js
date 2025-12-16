@@ -59,7 +59,8 @@ exec('docker --version', (error) => {
 });
 
 function verifyRedis() {
-  exec('redis-cli ping', (error, stdout) => {
+  // Use Docker exec to check Redis (works on all platforms)
+  exec('docker exec schedy-redis redis-cli ping', (error, stdout) => {
     if (!error && stdout.trim() === 'PONG') {
       console.log('✅ Redis is running and responding!');
       console.log('🚀 Queue functionality is ready.\n');
