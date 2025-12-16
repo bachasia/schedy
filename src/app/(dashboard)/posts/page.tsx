@@ -16,6 +16,7 @@ import {
   Instagram,
   Twitter,
   Video,
+  ExternalLink,
 } from "lucide-react";
 import axios from "axios";
 
@@ -32,6 +33,7 @@ interface Post {
   platform: Platform;
   scheduledAt: string | null;
   publishedAt: string | null;
+  platformPostId: string | null;
   createdAt: string;
   profile: {
     id: string;
@@ -55,6 +57,30 @@ const PLATFORM_INFO: Record<Platform, { name: string; icon: React.ComponentType<
   TWITTER: { name: "Twitter", icon: Twitter, color: "text-sky-500" },
   TIKTOK: { name: "TikTok", icon: Video, color: "text-emerald-500" },
 };
+
+// Generate social media post URL
+function getPostUrl(platform: Platform, platformPostId: string, username?: string): string {
+  switch (platform) {
+    case "FACEBOOK":
+      // Facebook post URL format: https://www.facebook.com/{page-id}/posts/{post-id}
+      return `https://www.facebook.com/${platformPostId}`;
+    case "INSTAGRAM":
+      // Instagram post URL format: https://www.instagram.com/p/{post-id}/
+      return `https://www.instagram.com/p/${platformPostId}/`;
+    case "TWITTER":
+      // Twitter post URL format: https://twitter.com/{username}/status/{tweet-id}
+      return username 
+        ? `https://twitter.com/${username}/status/${platformPostId}`
+        : `https://twitter.com/i/web/status/${platformPostId}`;
+    case "TIKTOK":
+      // TikTok post URL format: https://www.tiktok.com/@{username}/video/{video-id}
+      return username
+        ? `https://www.tiktok.com/@${username}/video/${platformPostId}`
+        : `https://www.tiktok.com/`;
+    default:
+      return "#";
+  }
+}
 
 export default function PostsPage() {
   const router = useRouter();
@@ -263,6 +289,22 @@ export default function PostsPage() {
                         <span className="flex items-center gap-1">
                           <CheckCircle2 className="h-3 w-3" />
                           Published {new Date(post.publishedAt).toLocaleDateString()}
+                          {post.platformPostId && (
+                            <button
+                              onClick={() => {
+                                const url = getPostUrl(
+                                  post.platform,
+                                  post.platformPostId!,
+                                  post.profile.platformUsername || undefined
+                                );
+                                window.open(url, "_blank", "noopener,noreferrer");
+                              }}
+                              className="ml-1 inline-flex items-center gap-0.5 text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400"
+                            >
+                              View
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </button>
+                          )}
                         </span>
                       )}
                       {!post.scheduledAt && !post.publishedAt && (
@@ -276,10 +318,28 @@ export default function PostsPage() {
 
                   {/* Actions */}
                   <div className="flex flex-shrink-0 items-center gap-2">
+                    {post.status === "PUBLISHED" && post.platformPostId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const url = getPostUrl(
+                            post.platform,
+                            post.platformPostId!,
+                            post.profile.platformUsername || undefined
+                          );
+                          window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                        title="View on social media"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => router.push(`/posts/${post.id}/edit`)}
+                      title="Edit post"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -287,6 +347,7 @@ export default function PostsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => setDeleteDialogId(post.id)}
+                      title="Delete post"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
