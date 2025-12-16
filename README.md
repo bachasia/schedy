@@ -1,36 +1,220 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Schedy - Social Media Scheduler
 
-## Getting Started
+A modern, full-featured social media scheduling application built with Next.js 15, supporting Facebook, Instagram, Twitter, and TikTok.
 
-First, run the development server:
+## ✨ Features
 
+### 🎯 Core Functionality
+- **Multi-Platform Support** - Schedule posts for Facebook, Instagram, Twitter, and TikTok
+- **Smart Scheduling** - Schedule posts for specific dates and times
+- **Queue Management** - Background job processing with Bull Queue
+- **Media Upload** - Support for images and videos
+- **Post Preview** - Real-time preview of posts before publishing
+- **Calendar View** - Visual calendar to manage scheduled posts
+
+### 🎨 User Interface
+- **Modern Design** - Clean, professional interface with Tailwind CSS
+- **Dark/Light Mode** - Toggle between themes with persistent settings
+- **Responsive Layout** - Works seamlessly on desktop, tablet, and mobile
+- **Grid Card Layout** - Organized profile and post management
+
+### 🔐 Authentication & Security
+- **NextAuth.js Integration** - Secure authentication system
+- **OAuth Integration** - Connect social media accounts securely
+- **Protected Routes** - Role-based access control
+
+### 📊 Management Features
+- **Profile Management** - Connect and manage multiple social media accounts
+- **Post Management** - Create, edit, delete, and retry failed posts
+- **Status Tracking** - Track post status (Draft, Scheduled, Publishing, Published, Failed)
+- **Queue Monitoring** - Real-time queue statistics and monitoring
+
+## 🚀 Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS v4
+- **Database**: SQLite with Prisma ORM
+- **Authentication**: NextAuth.js v5
+- **Queue System**: Bull with Redis
+- **UI Components**: Radix UI + Custom Components
+- **Form Handling**: React Hook Form + Zod
+- **HTTP Client**: Axios
+
+## 📦 Installation
+
+### Prerequisites
+- Node.js 18+
+- Redis (for queue management)
+
+### Setup
+
+1. **Clone the repository**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/bachasia/schedy.git
+cd schedy
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Install dependencies**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Setup environment variables**
+```bash
+cp env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Edit `.env` with your configuration:
+```env
+# Database
+DATABASE_URL="file:./dev.db"
 
-## Learn More
+# Auth
+NEXTAUTH_SECRET="your-secret-here"
+NEXTAUTH_URL="http://localhost:3001"
 
-To learn more about Next.js, take a look at the following resources:
+# Facebook App
+FACEBOOK_APP_ID="your-facebook-app-id"
+FACEBOOK_APP_SECRET="your-facebook-app-secret"
+FACEBOOK_REDIRECT_URI="http://localhost:3001/api/social/facebook/callback"
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Redis
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Initialize database**
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
 
-## Deploy on Vercel
+5. **Start development server**
+```bash
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Visit [http://localhost:3001](http://localhost:3001)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📖 Documentation
+
+Detailed documentation is available in the repository:
+
+- [Environment Variables](./ENVIRONMENT_VARIABLES.md)
+- [Facebook Integration](./FACEBOOK_INTEGRATION.md)
+- [Queue Management](./QUEUE_MANAGEMENT.md)
+- [Scheduling Functionality](./SCHEDULING_FUNCTIONALITY.md)
+- [Calendar View](./CALENDAR_VIEW.md)
+- [Troubleshooting](./TROUBLESHOOTING.md)
+
+## 🎯 Quick Start Guides
+
+- [Facebook Quick Start](./FACEBOOK_QUICK_START.md)
+- [Queue Quick Start](./QUEUE_QUICK_START.md)
+- [Scheduling Quick Start](./SCHEDULING_QUICK_START.md)
+- [Calendar Quick Start](./CALENDAR_QUICK_START.md)
+
+## 🏗️ Project Structure
+
+```
+schedy/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (auth)/            # Authentication pages
+│   │   ├── (dashboard)/       # Protected dashboard pages
+│   │   └── api/               # API routes
+│   ├── components/            # React components
+│   │   ├── dashboard/         # Dashboard-specific components
+│   │   ├── post/              # Post-related components
+│   │   ├── profile/           # Profile management components
+│   │   └── ui/                # Reusable UI components
+│   └── lib/                   # Utility functions and configurations
+│       ├── auth.ts            # NextAuth configuration
+│       ├── prisma.ts          # Prisma client
+│       ├── queue.ts           # Bull queue configuration
+│       └── social/            # Social media API integrations
+├── prisma/
+│   └── schema.prisma          # Database schema
+└── public/                    # Static assets
+```
+
+## 🎨 Features Showcase
+
+### Profile Management
+- Grid card layout for easy visualization
+- Support for multiple accounts per platform
+- Edit profile names and settings
+- Active/Inactive status tracking
+
+### Post Creation
+- Rich text editor with character limits per platform
+- Media upload with preview
+- Multi-step form (Content → Media → Schedule)
+- Real-time validation
+
+### Scheduling
+- Calendar view for visual planning
+- Date/time picker for precise scheduling
+- Bulk scheduling support
+- Automatic queue management
+
+### Theme Support
+- Light mode (default)
+- Dark mode
+- Persistent theme selection
+- Smooth transitions
+
+## 🔧 API Routes
+
+### Authentication
+- `POST /api/auth/register` - User registration
+- `GET/POST /api/auth/[...nextauth]` - NextAuth handlers
+
+### Profiles
+- `GET /api/profiles` - List all profiles
+- `POST /api/profiles` - Create profile
+- `PATCH /api/profiles/[id]` - Update profile
+- `DELETE /api/profiles/[id]` - Delete profile
+
+### Posts
+- `GET /api/posts` - List all posts
+- `POST /api/posts` - Create post
+- `GET /api/posts/[id]` - Get post details
+- `PATCH /api/posts/[id]` - Update post
+- `DELETE /api/posts/[id]` - Delete post
+- `POST /api/posts/[id]/retry` - Retry failed post
+
+### Social Media
+- `GET /api/social/facebook/connect` - Initiate Facebook OAuth
+- `GET /api/social/facebook/callback` - Facebook OAuth callback
+- Similar routes for Instagram, Twitter, TikTok
+
+### Queue Management
+- `GET /api/admin/queue-stats` - Get queue statistics
+- `GET /api/admin/queues/[[...path]]` - Bull Board interface
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+## 👤 Author
+
+**Bachasia**
+- GitHub: [@bachasia](https://github.com/bachasia)
+- Repository: [schedy](https://github.com/bachasia/schedy)
+
+## 🙏 Acknowledgments
+
+- Next.js team for the amazing framework
+- Tailwind CSS for the utility-first CSS framework
+- Prisma for the excellent ORM
+- All open-source contributors
+
+---
+
+Made with ❤️ by Bachasia
