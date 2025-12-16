@@ -12,7 +12,12 @@ import {
   Instagram,
   Twitter,
   Video,
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
 } from "lucide-react";
+
+import axios from "axios";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -31,7 +36,16 @@ type Profile = {
   platformUsername: string | null;
   isActive: boolean;
   updatedAt: string;
+  tokenExpiresAt?: string | null;
 };
+
+type TokenStatus = {
+  isValid: boolean;
+  isExpired: boolean;
+  expiresAt: string | null;
+  daysUntilExpiry: number | null;
+  errorMessage: string | null;
+} | null;
 
 type ApiResponse = {
   profiles: Profile[];
@@ -70,6 +84,8 @@ export default function ProfilesPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [tokenStatuses, setTokenStatuses] = useState<Record<string, TokenStatus>>({});
+  const [checkingToken, setCheckingToken] = useState<string | null>(null);
 
   const filteredProfiles = useMemo(() => {
     if (platformFilter === "ALL") return profiles;
@@ -129,6 +145,25 @@ export default function ProfilesPage() {
   const handleDeleteSuccess = () => {
     void fetchProfiles();
     setSelectedProfile(null);
+  };
+
+  const checkTokenStatus = async (profileId: string) => {
+    setCheckingToken(profileId);
+    try {
+      const res = await fetch(`/api/profiles/${profileId}/check-token`);
+      const data = await res.json();
+      
+      if (res.ok && data.tokenStatus) {
+        setTokenStatuses(prev => ({
+          ...prev,
+          [profileId]: data.tokenStatus
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to check token:", error);
+    } finally {
+      setCheckingToken(null);
+    }
   };
 
   return (
@@ -249,6 +284,33 @@ export default function ProfilesPage() {
                 </p>
               </div>
 
+              {/* Token Status */}
+              {tokenStatuses[profile.id] && (
+                <div className="mb-3">
+                  {tokenStatuses[profile.id]?.isValid ? (
+                    <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400">
+                      <ShieldCheck className="h-3 w-3" />
+                      <span>Token Valid</span>
+                      {tokenStatuses[profile.id]?.daysUntilExpiry !== null && (
+                        <span className="text-zinc-500">
+                          ({tokenStatuses[profile.id]?.daysUntilExpiry}d left)
+                        </span>
+                      )}
+                    </div>
+                  ) : tokenStatuses[profile.id]?.isExpired ? (
+                    <div className="flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400">
+                      <ShieldAlert className="h-3 w-3" />
+                      <span>Token Expired - Reconnect</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-[10px] text-orange-600 dark:text-orange-400">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Token Invalid - Reconnect</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Last updated */}
               <div className="mb-3 flex items-center gap-1 text-[10px] text-zinc-500">
                 <Clock className="h-2.5 w-2.5" />
@@ -263,25 +325,48 @@ export default function ProfilesPage() {
               </div>
 
               {/* Action buttons */}
-              <div className="flex gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 flex-1 px-2 text-xs"
-                  onClick={() => handleEdit(profile)}
-                >
-                  <Pencil className="mr-1 h-3 w-3" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 flex-1 px-2 text-xs"
-                  onClick={() => handleDelete(profile)}
-                >
-                  <Unplug className="mr-1 h-3 w-3" />
-                  Delete
-                </Button>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 flex-1 px-2 text-xs"
+                    onClick={() => checkTokenStatus(profile.id)}
+                    disabled={checkingToken === profile.id}
+                  >
+                    {checkingToken === profile.id ? (
+                      <>
+                        <RefreshCcw className="mr-1 h-3 w-3 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="mr-1 h-3 w-3" />
+                        Check Token
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 flex-1 px-2 text-xs"
+                    onClick={() => handleEdit(profile)}
+                  >
+                    <Pencil className="mr-1 h-3 w-3" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 flex-1 px-2 text-xs"
+                    onClick={() => handleDelete(profile)}
+                  >
+                    <Unplug className="mr-1 h-3 w-3" />
+                    Delete
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
