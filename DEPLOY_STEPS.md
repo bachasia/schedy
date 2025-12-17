@@ -99,7 +99,7 @@ curl http://localhost:3100/api/health
 ```
 
 Mở browser và truy cập:
-- **HTTP**: `http://your-vps-ip` hoặc `http://schedy.zido.me` (port 80)
+- **HTTP**: `http://your-vps-ip:8080` hoặc `http://schedy.zido.me:8080` (port 8080)
 - **Direct**: `http://your-vps-ip:3100` (port 3100)
 - **HTTPS**: Cần setup reverse proxy (Cloudflare, Caddy, hoặc Traefik) nếu muốn HTTPS
 

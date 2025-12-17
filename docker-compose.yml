@@ -34,8 +34,8 @@ services:
     env_file:
       - .env.production  # Load all environment variables from .env.production
     ports:
-      - "80:3100"   # Expose on port 80 (standard HTTP)
-      - "3100:3100" # Also keep port 3100 for direct access
+      - "8080:3100"   # Expose on port 8080 (standard HTTP)
+      - "3100:3100"   # Also keep port 3100 for direct access
     environment:
       # Override specific values if needed (these take precedence over env_file)
       - NODE_ENV=production
