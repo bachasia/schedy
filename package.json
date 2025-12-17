@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3100",
+    "dev": "next dev -p 3100 --webpack",
     "dev:redis": "concurrently \"npm run redis:check\" \"npm run dev\" --names \"redis,next\" --prefix-colors \"yellow,cyan\"",
     "dev:docker": "concurrently \"npm run redis:docker\" \"npm run dev\" --names \"redis,next\" --prefix-colors \"blue,cyan\"",
     "redis:check": "node scripts/start-redis.js",
