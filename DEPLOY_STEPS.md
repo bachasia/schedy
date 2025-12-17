@@ -81,7 +81,7 @@ Script này sẽ:
 
 Docker containers:
 NAME            STATUS    PORTS
-schedy-app      Up        0.0.0.0:80->3001/tcp, 0.0.0.0:3001->3001/tcp
+schedy-app      Up        0.0.0.0:80->3100/tcp, 0.0.0.0:3100->3100/tcp
 schedy-redis    Up        0.0.0.0:6379->6379/tcp
 
 Redis: PONG
@@ -100,7 +100,7 @@ curl http://localhost:3001/api/health
 
 Mở browser và truy cập:
 - **HTTP**: `http://your-vps-ip` hoặc `http://schedy.zido.me` (port 80)
-- **Direct**: `http://your-vps-ip:3001` (port 3001)
+- **Direct**: `http://your-vps-ip:3100` (port 3100)
 - **HTTPS**: Cần setup reverse proxy (Cloudflare, Caddy, hoặc Traefik) nếu muốn HTTPS
 
 ## 📊 Các Lệnh Hữu Ích
@@ -181,7 +181,7 @@ Hoặc setup SSL trực tiếp với certbot và reverse proxy khác.
 cat .env.production
 
 # Check ports
-netstat -tuln | grep 3001
+netstat -tuln | grep 3100
 ```
 
 ### Redis không kết nối?

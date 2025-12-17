@@ -26,5 +26,5 @@ echo ""
 echo "✅ Build complete: $TAG"
 echo ""
 echo "To run the container:"
-echo "  docker run -p 3001:3001 $TAG"
+echo "  docker run -p 3100:3100 $TAG"
 

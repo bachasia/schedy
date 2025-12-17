@@ -83,14 +83,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 USER nextjs
 
-EXPOSE 3001
+EXPOSE 3100
 
-ENV PORT=3001
+ENV PORT=3100
 ENV HOSTNAME="0.0.0.0"
 
 # Healthcheck for container monitoring
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3001/api/health || exit 1
+    CMD curl -f http://localhost:3100/api/health || exit 1
 
 # Start the application
 CMD ["node", "server.js"]

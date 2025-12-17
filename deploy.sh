@@ -76,10 +76,10 @@ build_standard() {
     
     if [ "$USE_CACHE" = "false" ]; then
         log_warn "Building without cache..."
-        docker-compose build --no-cache
+        docker-compose --env-file .env.production build --no-cache
     else
         log_info "Building with cache (faster rebuilds)..."
-        docker-compose build
+        docker-compose --env-file .env.production build
     fi
 }
 
@@ -183,11 +183,11 @@ health() {
     
     echo ""
     log_info "Redis:"
-    docker-compose exec redis redis-cli ping || log_error "Redis not responding"
+    docker-compose --env-file .env.production exec redis redis-cli ping || log_error "Redis not responding"
     
     echo ""
     log_info "Application:"
-    curl -f http://localhost:3001/api/health || log_error "App not responding"
+    curl -f http://localhost:3100/api/health || log_error "App not responding"
     
     echo ""
     log_info "Health check complete!"

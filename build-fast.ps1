@@ -26,7 +26,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "✅ Build complete: $Tag" -ForegroundColor Green
     Write-Host ""
     Write-Host "To run the container:" -ForegroundColor Cyan
-    Write-Host "  docker run -p 3001:3001 $Tag" -ForegroundColor White
+    Write-Host "  docker run -p 3100:3100 $Tag" -ForegroundColor White
 } else {
     Write-Host ""
     Write-Host "❌ Build failed!" -ForegroundColor Red

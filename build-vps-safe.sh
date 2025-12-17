@@ -255,7 +255,7 @@ main() {
     echo -e "${BLUE}Size: $(docker images $TAG --format '{{.Size}}')${NC}"
     echo ""
     echo -e "${YELLOW}Next steps:${NC}"
-    echo "  1. Test: docker run -p 3001:3001 $TAG"
+    echo "  1. Test: docker run -p 3100:3100 $TAG"
     echo "  2. Deploy: ./deploy.sh up"
 }
 

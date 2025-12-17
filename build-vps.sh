@@ -100,7 +100,7 @@ if docker build "${BUILD_ARGS[@]}" .; then
     echo -e "${BLUE}Size: $(docker images $TAG --format '{{.Size}}')${NC}"
     echo ""
     echo -e "${YELLOW}Next steps:${NC}"
-    echo "  1. Test the image: docker run -p 3001:3001 $TAG"
+    echo "  1. Test the image: docker run -p 3100:3100 $TAG"
     echo "  2. Deploy with: ./deploy.sh up"
     echo "  3. Or use docker-compose: docker-compose up -d"
 else
