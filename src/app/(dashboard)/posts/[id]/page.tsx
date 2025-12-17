@@ -161,7 +161,7 @@ export default function PostDetailPage() {
     id: `media-${idx}`,
     preview: url,
     url,
-    type: url.includes("video") || post.mediaType === "VIDEO" ? "video" : "image",
+    type: (url.includes("video") || post.mediaType === "VIDEO" ? "video" : "image") as "image" | "video",
   }));
 
   return (
