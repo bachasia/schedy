@@ -120,7 +120,7 @@ export async function refreshFacebookToken(profileId: string): Promise<{
 
     return {
       success: true,
-      message: `Token refreshed successfully. Expires in ${longLivedToken.expires_in / 86400} days.`,
+      message: `Token refreshed successfully. Expires in ${Math.floor(expiresIn / 86400)} days.`,
       expiresAt,
     };
   } catch (error: any) {
