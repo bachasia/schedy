@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       const profile = profiles.find((p) => p.id === profileId);
       if (!profile) return null;
 
-      const postData: Prisma.PostUncheckedCreateInput = {
+      const postData: any = {
         userId: userId,
         profileId,
         content,
@@ -119,14 +119,12 @@ export async function POST(request: Request) {
       };
 
       // Only set mediaType if there are media URLs
-      if (mediaUrls && mediaUrls.length > 0 && mediaType) {
-        postData.mediaType = mediaType as "IMAGE" | "VIDEO" | "CAROUSEL";
-      } else if (mediaUrls && mediaUrls.length > 0) {
-        postData.mediaType = "IMAGE";
+      if (mediaUrls && mediaUrls.length > 0) {
+        postData.mediaType = mediaType || "IMAGE";
       }
 
       return prisma.post.create({
-        data: postData,
+        data: postData as Prisma.PostUncheckedCreateInput,
         include: {
           profile: {
             select: {
