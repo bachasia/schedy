@@ -129,8 +129,9 @@ logs() {
 # Run database migrations
 migrate() {
     log_info "Running database migrations..."
+    # Fix permissions first, then run migrations as root to ensure write access
     # Use Prisma CLI directly (installed globally in Dockerfile as 6.3.1)
-    # Avoid using npx as it may auto-install Prisma 7
+    docker-compose --env-file .env.production exec -u root app sh -c "chown -R nextjs:nodejs /app/prisma && chmod -R 755 /app/prisma" || true
     docker-compose --env-file .env.production exec app prisma migrate deploy
     log_info "Migrations completed!"
 }

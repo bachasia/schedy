@@ -70,8 +70,8 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
     mkdir -p /app/prisma
 
-# Install curl for healthcheck
-RUN apk add --no-cache curl
+# Install curl and su-exec for healthcheck and user switching
+RUN apk add --no-cache curl su-exec
 
 # Copy necessary files in optimal order
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -87,6 +87,11 @@ USER root
 RUN npm install -g prisma@6.3.1 --force && \
     which prisma && \
     prisma --version
+
+# Copy entrypoint script
+COPY --chown=root:root docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 USER nextjs
 
 EXPOSE 3100
@@ -97,6 +102,9 @@ ENV HOSTNAME="0.0.0.0"
 # Healthcheck for container monitoring
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3100/api/health || exit 1
+
+# Use entrypoint to fix permissions and run migrations
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Start the application
 CMD ["node", "server.js"]
