@@ -32,7 +32,7 @@ interface PostJobData {
 
 // Create Bull queue for social media posts
 // Handle Redis connection errors gracefully (especially during build time)
-let socialPostsQueue: Queue<PostJobData>;
+let socialPostsQueue: InstanceType<typeof Queue<PostJobData>>;
 
 try {
   socialPostsQueue = new Queue<PostJobData>("social-posts", {
@@ -70,7 +70,7 @@ try {
     getJobs: () => Promise.resolve([]),
     getJobCounts: () => Promise.resolve({ waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 }),
     clean: () => Promise.resolve([]),
-  } as Queue<PostJobData>;
+  } as any;
 }
 
 export { socialPostsQueue };
