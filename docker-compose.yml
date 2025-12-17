@@ -31,28 +31,19 @@ services:
     image: schedy:latest
     container_name: schedy-app
     restart: unless-stopped
+    env_file:
+      - .env.production  # Load all environment variables from .env.production
     ports:
       - "80:3001"   # Expose on port 80 (standard HTTP)
       - "3001:3001" # Also keep port 3001 for direct access
     environment:
+      # Override specific values if needed (these take precedence over env_file)
       - NODE_ENV=production
       - DATABASE_URL=file:./prisma/dev.db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - REDIS_DB=0
-      # Copy these from your .env file
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
-      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET}
-      - FACEBOOK_REDIRECT_URI=${FACEBOOK_REDIRECT_URI}
-      - TWITTER_CLIENT_ID=${TWITTER_CLIENT_ID}
-      - TWITTER_CLIENT_SECRET=${TWITTER_CLIENT_SECRET}
-      - TWITTER_REDIRECT_URI=${TWITTER_REDIRECT_URI}
-      - TIKTOK_CLIENT_KEY=${TIKTOK_CLIENT_KEY}
-      - TIKTOK_CLIENT_SECRET=${TIKTOK_CLIENT_SECRET}
-      - TIKTOK_REDIRECT_URI=${TIKTOK_REDIRECT_URI}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
     volumes:
       - app-data:/app/prisma
     depends_on:

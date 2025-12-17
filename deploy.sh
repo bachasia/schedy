@@ -88,10 +88,12 @@ up() {
     log_info "Starting services..."
     check_env
     
-    # Load environment variables
-    export $(cat .env.production | grep -v '^#' | xargs)
+    # Load environment variables from .env.production for docker-compose
+    # Docker Compose will also use env_file in docker-compose.yml
+    export $(cat .env.production | grep -v '^#' | grep -v '^$' | xargs)
     
-    docker-compose up -d
+    # Use --env-file to explicitly load .env.production
+    docker-compose --env-file .env.production up -d
     log_info "Services started!"
     log_info "Waiting for services to be healthy..."
     sleep 10
@@ -106,7 +108,7 @@ up() {
 # Stop services
 down() {
     log_info "Stopping services..."
-    docker-compose down
+    docker-compose --env-file .env.production down
     log_info "Services stopped!"
 }
 
@@ -121,13 +123,13 @@ restart() {
 logs() {
     SERVICE=${1:-app}
     log_info "Showing logs for $SERVICE..."
-    docker-compose logs -f $SERVICE
+    docker-compose --env-file .env.production logs -f $SERVICE
 }
 
 # Run database migrations
 migrate() {
     log_info "Running database migrations..."
-    docker-compose exec app npx prisma migrate deploy
+    docker-compose --env-file .env.production exec app npx prisma migrate deploy
     log_info "Migrations completed!"
 }
 
@@ -177,7 +179,7 @@ health() {
     
     echo ""
     log_info "Docker containers:"
-    docker-compose ps
+    docker-compose --env-file .env.production ps
     
     echo ""
     log_info "Redis:"
