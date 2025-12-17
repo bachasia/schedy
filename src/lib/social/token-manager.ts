@@ -99,9 +99,10 @@ export async function refreshFacebookToken(profileId: string): Promise<{
     // Exchange short-lived token for long-lived token
     const longLivedToken = await getFacebookLongLivedToken(profile.accessToken);
 
-    // Calculate expiration (60 days from now)
+    // Calculate expiration (60 days from now, or use default if expires_in is not provided)
+    const expiresIn = longLivedToken.expires_in || 60 * 24 * 60 * 60; // Default to 60 days in seconds
     const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + longLivedToken.expires_in);
+    expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn);
 
     // Update profile with new token
     await prisma.profile.update({
