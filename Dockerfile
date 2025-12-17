@@ -82,8 +82,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modul
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Install Prisma CLI for migrations (use specific version to avoid Prisma 7)
+# Install without npm prefix to ensure it's in PATH
 USER root
-RUN npm install -g prisma@6.3.1
+RUN npm install -g prisma@6.3.1 --force && \
+    which prisma && \
+    prisma --version
 USER nextjs
 
 EXPOSE 3100
