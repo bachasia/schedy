@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma, Platform, PostStatus } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -107,17 +108,23 @@ export async function POST(request: Request) {
       const profile = profiles.find((p) => p.id === profileId);
       if (!profile) return null;
 
+      const postData: Prisma.PostUncheckedCreateInput = {
+        userId: userId,
+        profileId,
+        content,
+        mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls.join(",") : "", // Convert array to comma-separated string
+        platform: profile.platform,
+        status: status as PostStatus,
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      };
+
+      // Only set mediaType if there are media URLs
+      if (mediaUrls && mediaUrls.length > 0) {
+        postData.mediaType = (mediaType || "IMAGE") as Prisma.MediaType;
+      }
+
       return prisma.post.create({
-        data: {
-          userId: userId,
-          profileId,
-          content,
-          mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls.join(",") : "", // Convert array to comma-separated string
-          mediaType: mediaUrls && mediaUrls.length > 0 ? (mediaType || "IMAGE") : undefined, // Only set mediaType if there are media URLs
-          platform: profile.platform,
-          status,
-          scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        },
+        data: postData,
         include: {
           profile: {
             select: {
