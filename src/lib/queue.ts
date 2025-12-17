@@ -51,8 +51,15 @@ try {
   // Handle connection errors gracefully (especially during build)
   socialPostsQueue.on("error", (error) => {
     // Suppress errors during build time
-    if (process.env.NEXT_PHASE === "phase-production-build") {
-      return; // Silently ignore during build
+    // Check for build time indicators
+    const isBuildTime = 
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      process.env.NODE_ENV === "production" && !process.env.REDIS_HOST ||
+      typeof process.env.NEXT_RUNTIME === "undefined";
+    
+    if (isBuildTime) {
+      // Silently ignore during build - Redis is not available
+      return;
     }
     console.error("[Queue] Queue error:", error);
   });
