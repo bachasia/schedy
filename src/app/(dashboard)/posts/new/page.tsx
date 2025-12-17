@@ -77,6 +77,13 @@ export default function NewPostPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<any[]>([]);
 
+  // Wrapper to log media changes
+  const handleMediaChange = (files: any[]) => {
+    console.log("[NewPost] handleMediaChange called with files:", files);
+    console.log("[NewPost] Files with URLs:", files.filter(f => f.url).map(f => ({ id: f.id, url: f.url })));
+    setMediaFiles(files);
+  };
+
   const {
     register,
     handleSubmit,
@@ -521,7 +528,7 @@ export default function NewPostPage() {
 
             <MediaUpload
               selectedPlatforms={selectedProfiles.map((p) => p.platform)}
-              onMediaChange={setMediaFiles}
+              onMediaChange={handleMediaChange}
             />
 
             <div className="flex items-center gap-2 pt-4">

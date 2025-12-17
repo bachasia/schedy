@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, X, Image as ImageIcon, Video, AlertCircle } from "lucide-react";
 import axios from "axios";
 
@@ -51,6 +51,14 @@ export function MediaUpload({
   const [errors, setErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
+
+  // Sync mediaFiles with parent component whenever it changes
+  useEffect(() => {
+    console.log("[MediaUpload] mediaFiles changed, syncing with parent:", mediaFiles);
+    console.log("[MediaUpload] Files with URLs:", mediaFiles.filter(f => f.url).map(f => ({ id: f.id, url: f.url })));
+    onMediaChange(mediaFiles);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaFiles]);
 
   const getStrictestLimits = () => {
     if (selectedPlatforms.length === 0) {
@@ -149,7 +157,7 @@ export function MediaUpload({
     if (validFiles.length > 0) {
       const updatedFiles = [...mediaFiles, ...validFiles];
       setMediaFiles(updatedFiles);
-      onMediaChange(updatedFiles);
+      // Parent will be notified via useEffect
 
       // Auto-upload files
       validFiles.forEach(file => uploadFile(file));
@@ -189,10 +197,9 @@ export function MediaUpload({
         );
         console.log("[MediaUpload] Upload successful - URL:", response.data.url);
         console.log("[MediaUpload] Updated files:", updatedFiles);
-        // Notify parent component with updated files
-        onMediaChange(updatedFiles);
         return updatedFiles;
       });
+      // Parent will be notified via useEffect
     } catch (error) {
       console.error("Upload error:", error);
       // Use functional update to ensure we have the latest state
@@ -202,17 +209,16 @@ export function MediaUpload({
             ? { ...f, uploading: false, error: "Upload failed. Please try again." }
             : f,
         );
-        // Notify parent component with updated files
-        onMediaChange(updatedFiles);
         return updatedFiles;
       });
+      // Parent will be notified via useEffect
     }
   };
 
   const removeFile = (id: string) => {
     const updatedFiles = mediaFiles.filter(f => f.id !== id);
     setMediaFiles(updatedFiles);
-    onMediaChange(updatedFiles);
+    // Parent will be notified via useEffect
   };
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
