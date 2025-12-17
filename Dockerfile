@@ -103,7 +103,7 @@ ENV HOSTNAME="0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:3100/api/health || exit 1
 
-# Use entrypoint to fix permissions and run migrations
+# Use entrypoint to fix permissions
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Start the application
