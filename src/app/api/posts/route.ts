@@ -119,8 +119,10 @@ export async function POST(request: Request) {
       };
 
       // Only set mediaType if there are media URLs
-      if (mediaUrls && mediaUrls.length > 0) {
-        postData.mediaType = (mediaType || "IMAGE") as Prisma.MediaType;
+      if (mediaUrls && mediaUrls.length > 0 && mediaType) {
+        postData.mediaType = mediaType as "IMAGE" | "VIDEO" | "CAROUSEL";
+      } else if (mediaUrls && mediaUrls.length > 0) {
+        postData.mediaType = "IMAGE";
       }
 
       return prisma.post.create({
