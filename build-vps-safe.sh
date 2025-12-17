@@ -61,11 +61,15 @@ check_resources() {
     if [ "$DISK_AVAIL" -lt 5 ]; then
         echo -e "${RED}❌ Insufficient disk space! Need at least 5GB free.${NC}"
         echo -e "${YELLOW}Current: ${DISK_AVAIL}GB${NC}"
-        echo -e "${YELLOW}Cleaning up Docker resources...${NC}"
-        docker system prune -a -f --volumes || true
+        echo -e "${YELLOW}Cleaning up unused Docker resources (keeping running containers)...${NC}"
+        # Only clean unused resources, not running containers or volumes
+        docker container prune -f || true
+        docker image prune -a -f || true
+        docker builder prune -a -f || true
         DISK_AVAIL=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
         if [ "$DISK_AVAIL" -lt 5 ]; then
             echo -e "${RED}Still insufficient space. Please free up disk space manually.${NC}"
+            echo -e "${YELLOW}Note: Script will NOT stop your running containers.${NC}"
             exit 1
         fi
     fi
@@ -86,19 +90,26 @@ check_resources() {
 cleanup_before_build() {
     echo -e "${BLUE}Cleaning up before build...${NC}"
     
-    # Stop running containers (except essential)
-    docker ps -q | xargs -r docker stop || true
+    # Only stop schedy-related containers (if any are running)
+    echo -e "${YELLOW}Stopping schedy containers only...${NC}"
+    docker ps --filter "name=schedy" --format "{{.ID}}" | xargs -r docker stop || true
     
-    # Remove stopped containers
+    # Remove stopped schedy containers
+    docker ps -a --filter "name=schedy" --format "{{.ID}}" | xargs -r docker rm || true
+    
+    # Remove old schedy images (keep latest)
+    echo -e "${YELLOW}Cleaning up old schedy images...${NC}"
+    docker images --filter "reference=schedy*" --format "{{.ID}}" | tail -n +2 | xargs -r docker rmi || true
+    
+    # Remove stopped containers (only stopped, not running)
+    echo -e "${YELLOW}Removing stopped containers...${NC}"
     docker container prune -f || true
     
-    # Remove unused images (keep last 2)
-    docker image prune -a -f || true
-    
-    # Clean build cache (keep 1GB)
+    # Clean build cache (keep recent)
+    echo -e "${YELLOW}Cleaning build cache...${NC}"
     docker builder prune -f --filter "until=24h" || true
     
-    echo -e "${GREEN}✓ Cleanup completed${NC}"
+    echo -e "${GREEN}✓ Cleanup completed (only schedy resources)${NC}"
 }
 
 # Function to set memory limits
@@ -232,9 +243,10 @@ main() {
             ;;
     esac
     
-    # Final cleanup
-    echo -e "${BLUE}Final cleanup...${NC}"
-    docker system prune -f || true
+    # Final cleanup (only remove unused resources, not running containers)
+    echo -e "${BLUE}Final cleanup (unused resources only)...${NC}"
+    docker container prune -f || true  # Only stopped containers
+    docker image prune -f || true     # Only dangling images
     
     echo ""
     echo -e "${GREEN}✅ Build completed successfully!${NC}"
