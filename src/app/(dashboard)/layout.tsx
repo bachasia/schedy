@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { UserMenu } from "@/components/dashboard/user-menu";
 import { DashboardBreadcrumbs } from "@/components/dashboard/breadcrumbs";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { DashboardFooter } from "@/components/dashboard-footer";
 
 export default async function DashboardLayout({
   children,
@@ -40,6 +41,8 @@ export default async function DashboardLayout({
         <main className="flex-1 px-4 py-4 md:px-8 md:py-6">
           <div className="mx-auto w-full max-w-6xl space-y-4">{children}</div>
         </main>
+        {/* Footer */}
+        <DashboardFooter />
       </div>
     </div>
   );
