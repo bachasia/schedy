@@ -112,8 +112,8 @@ export async function POST(request: Request) {
           userId: userId,
           profileId,
           content,
-          mediaUrls: mediaUrls ? mediaUrls.join(",") : "", // Convert array to comma-separated string
-          mediaType: mediaType || "IMAGE",
+          mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls.join(",") : "", // Convert array to comma-separated string
+          mediaType: mediaUrls && mediaUrls.length > 0 ? (mediaType || "IMAGE") : null, // Only set mediaType if there are media URLs
           platform: profile.platform,
           status,
           scheduledAt: scheduledAt ? new Date(scheduledAt) : null,

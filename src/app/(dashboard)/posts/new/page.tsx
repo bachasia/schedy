@@ -140,15 +140,36 @@ export default function NewPostPage() {
   const onSaveDraft = async (data: PostFormValues) => {
     setIsSaving(true);
     try {
+      // Check if any media is still uploading
+      const uploadingFiles = mediaFiles.filter((f) => f.uploading);
+      if (uploadingFiles.length > 0) {
+        alert("Please wait for media uploads to complete before saving.");
+        setIsSaving(false);
+        return;
+      }
+
+      // Check if there are media files with errors
+      const errorFiles = mediaFiles.filter((f) => f.error);
+      if (errorFiles.length > 0) {
+        alert("Some media files failed to upload. Please remove them or try again.");
+        setIsSaving(false);
+        return;
+      }
+
       const mediaUrls = mediaFiles
         .filter((f) => f.url)
         .map((f) => f.url as string);
+
+      // Only set mediaType if there are actual media URLs
+      const mediaType = mediaUrls.length > 0
+        ? (mediaFiles.some((f) => f.type === "video") ? "VIDEO" : mediaUrls.length > 1 ? "CAROUSEL" : "IMAGE")
+        : undefined;
 
       await axios.post("/api/posts", {
         content: data.content,
         profileIds: data.profileIds,
         mediaUrls,
-        mediaType: mediaFiles.some((f) => f.type === "video") ? "VIDEO" : "IMAGE",
+        mediaType,
         status: "DRAFT",
       });
 
@@ -176,9 +197,30 @@ export default function NewPostPage() {
   const onSchedulePost = async (scheduledAt: Date | null) => {
     setIsSaving(true);
     try {
+      // Check if any media is still uploading
+      const uploadingFiles = mediaFiles.filter((f) => f.uploading);
+      if (uploadingFiles.length > 0) {
+        alert("Please wait for media uploads to complete before publishing.");
+        setIsSaving(false);
+        return;
+      }
+
+      // Check if there are media files with errors
+      const errorFiles = mediaFiles.filter((f) => f.error);
+      if (errorFiles.length > 0) {
+        alert("Some media files failed to upload. Please remove them or try again.");
+        setIsSaving(false);
+        return;
+      }
+
       const mediaUrls = mediaFiles
         .filter((f) => f.url)
         .map((f) => f.url as string);
+
+      // Only set mediaType if there are actual media URLs
+      const mediaType = mediaUrls.length > 0
+        ? (mediaFiles.some((f) => f.type === "video") ? "VIDEO" : mediaUrls.length > 1 ? "CAROUSEL" : "IMAGE")
+        : undefined;
 
       const status = scheduledAt ? "SCHEDULED" : "PUBLISHED";
 
@@ -186,7 +228,7 @@ export default function NewPostPage() {
         content,
         profileIds: selectedProfileIds,
         mediaUrls,
-        mediaType: mediaFiles.some((f) => f.type === "video") ? "VIDEO" : "IMAGE",
+        mediaType,
         status,
         scheduledAt: scheduledAt ? scheduledAt.toISOString() : undefined,
       });
