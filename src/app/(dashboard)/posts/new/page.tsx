@@ -160,6 +160,9 @@ export default function NewPostPage() {
         .filter((f) => f.url)
         .map((f) => f.url as string);
 
+      console.log("[NewPost] Saving draft - mediaFiles:", mediaFiles);
+      console.log("[NewPost] Saving draft - mediaUrls:", mediaUrls);
+
       // Only set mediaType if there are actual media URLs
       const mediaType = mediaUrls.length > 0
         ? (mediaFiles.some((f) => f.type === "video") ? "VIDEO" : mediaUrls.length > 1 ? "CAROUSEL" : "IMAGE")
@@ -216,6 +219,9 @@ export default function NewPostPage() {
       const mediaUrls = mediaFiles
         .filter((f) => f.url)
         .map((f) => f.url as string);
+
+      console.log("[NewPost] Scheduling post - mediaFiles:", mediaFiles);
+      console.log("[NewPost] Scheduling post - mediaUrls:", mediaUrls);
 
       // Only set mediaType if there are actual media URLs
       const mediaType = mediaUrls.length > 0

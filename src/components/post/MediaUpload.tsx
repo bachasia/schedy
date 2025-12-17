@@ -180,22 +180,32 @@ export function MediaUpload({
         },
       });
 
-      setMediaFiles(prev =>
-        prev.map(f =>
+      // Use functional update to ensure we have the latest state
+      setMediaFiles(prev => {
+        const updatedFiles = prev.map(f =>
           f.id === mediaFile.id
             ? { ...f, uploading: false, url: response.data.url }
             : f,
-        ),
-      );
+        );
+        console.log("[MediaUpload] Upload successful - URL:", response.data.url);
+        console.log("[MediaUpload] Updated files:", updatedFiles);
+        // Notify parent component with updated files
+        onMediaChange(updatedFiles);
+        return updatedFiles;
+      });
     } catch (error) {
       console.error("Upload error:", error);
-      setMediaFiles(prev =>
-        prev.map(f =>
+      // Use functional update to ensure we have the latest state
+      setMediaFiles(prev => {
+        const updatedFiles = prev.map(f =>
           f.id === mediaFile.id
             ? { ...f, uploading: false, error: "Upload failed. Please try again." }
             : f,
-        ),
-      );
+        );
+        // Notify parent component with updated files
+        onMediaChange(updatedFiles);
+        return updatedFiles;
+      });
     }
   };
 
@@ -404,5 +414,9 @@ export function MediaUpload({
     </div>
   );
 }
+
+
+
+
 
 

@@ -64,7 +64,7 @@ openssl rand -base64 32
 Script này sẽ:
 - ✅ Kiểm tra `.env.production` tồn tại
 - ✅ Start Redis container
-- ✅ Start App container (chạy trực tiếp trên port 80 và 3100)
+- ✅ Start App container (chạy trực tiếp trên port 8080 và 3100)
 - ✅ Chạy database migrations tự động
 - ✅ Hiển thị URL để truy cập
 
@@ -81,7 +81,7 @@ Script này sẽ:
 
 Docker containers:
 NAME            STATUS    PORTS
-schedy-app      Up        0.0.0.0:80->3100/tcp, 0.0.0.0:3100->3100/tcp
+schedy-app      Up        0.0.0.0:8080->3100/tcp, 0.0.0.0:3100->3100/tcp
 schedy-redis    Up        0.0.0.0:6379->6379/tcp
 
 Redis: PONG
@@ -210,8 +210,8 @@ docker exec schedy-app npx prisma migrate status
 # Check app logs
 ./deploy.sh logs app
 
-# Check port 80
-netstat -tuln | grep 80
+# Check port 8080
+netstat -tuln | grep 8080
 
 # Test app directly
 curl http://localhost:3100/api/health

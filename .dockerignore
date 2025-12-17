@@ -81,9 +81,10 @@ backups/
 nginx/
 certbot/
 deploy.sh
-*.sh
-!build-fast.sh
+# Allow specific shell scripts needed for Docker
 !docker-entrypoint.sh
+!build-fast.sh
+*.sh
 
 # Build scripts (not needed in image)
 scripts/
