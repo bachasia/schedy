@@ -42,13 +42,13 @@ export function Sidebar({ userName }: SidebarProps) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden h-screen w-60 flex-col border-r border-zinc-200 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950/80 md:flex">
+      <aside className="fixed left-0 top-0 z-40 hidden h-screen w-60 flex-col border-r border-zinc-200 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950/80 md:flex">
         <div className="mb-6 flex items-center justify-between">
           <span className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Schedy
           </span>
         </div>
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -68,7 +68,7 @@ export function Sidebar({ userName }: SidebarProps) {
             );
           })}
         </nav>
-        <div className="mt-4 border-t border-zinc-200 pt-4 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+        <div className="mt-auto border-t border-zinc-200 pt-4 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
           <div className="mb-2 truncate">Signed in as {userName ?? "User"}</div>
           <Button
             variant="outline"
