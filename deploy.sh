@@ -129,7 +129,8 @@ logs() {
 # Run database migrations
 migrate() {
     log_info "Running database migrations..."
-    docker-compose --env-file .env.production exec app npx prisma migrate deploy
+    # Use specific Prisma version to avoid auto-installing Prisma 7
+    docker-compose --env-file .env.production exec app npx prisma@6.3.1 migrate deploy
     log_info "Migrations completed!"
 }
 
