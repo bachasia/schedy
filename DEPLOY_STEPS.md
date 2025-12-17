@@ -1,0 +1,261 @@
+# 🚀 Các Bước Sau Khi Build Thành Công
+
+## ✅ Build đã hoàn thành!
+
+Sau khi build Docker image thành công, làm theo các bước sau:
+
+## 📋 Bước 1: Chuẩn Bị Environment Variables
+
+```bash
+# Copy file template
+cp env.production.example .env.production
+
+# Edit với nano hoặc vi
+nano .env.production
+```
+
+### Điền các thông tin quan trọng:
+
+```env
+# Database (giữ nguyên)
+DATABASE_URL="file:./prisma/dev.db"
+
+# NextAuth - QUAN TRỌNG!
+NEXTAUTH_SECRET="generate-a-secure-random-string-min-32-chars"
+NEXTAUTH_URL="https://schedy.zido.me"  # Domain thực của bạn
+
+# Redis (giữ nguyên cho Docker)
+REDIS_HOST="redis"
+REDIS_PORT="6379"
+REDIS_PASSWORD=""
+REDIS_DB="0"
+
+# Facebook App (Production credentials)
+FACEBOOK_APP_ID="your-production-app-id"
+FACEBOOK_APP_SECRET="your-production-app-secret"
+FACEBOOK_REDIRECT_URI="https://schedy.zido.me/api/social/facebook/callback"
+
+# Twitter App (Production credentials)
+TWITTER_CLIENT_ID="your-production-client-id"
+TWITTER_CLIENT_SECRET="your-production-client-secret"
+TWITTER_REDIRECT_URI="https://schedy.zido.me/api/social/twitter/callback"
+
+# TikTok App (Production credentials)
+TIKTOK_CLIENT_KEY="your-production-client-key"
+TIKTOK_CLIENT_SECRET="your-production-client-secret"
+TIKTOK_REDIRECT_URI="https://schedy.zido.me/api/social/tiktok/callback"
+
+# Trust hosts (đã có trong code)
+AUTH_TRUST_HOST=true
+```
+
+**Generate NEXTAUTH_SECRET:**
+```bash
+openssl rand -base64 32
+```
+
+## 🚀 Bước 2: Deploy Services
+
+```bash
+# Start tất cả services (Redis + App + Nginx)
+./deploy.sh up
+```
+
+Script này sẽ:
+- ✅ Kiểm tra `.env.production` tồn tại
+- ✅ Start Redis container
+- ✅ Start App container
+- ✅ Start Nginx container
+- ✅ Chạy database migrations tự động
+- ✅ Hiển thị URL để truy cập
+
+## 🔍 Bước 3: Kiểm Tra Services
+
+```bash
+# Kiểm tra health của tất cả services
+./deploy.sh health
+```
+
+**Output mong đợi:**
+```
+[INFO] Checking service health...
+
+Docker containers:
+NAME            STATUS    PORTS
+schedy-app      Up        0.0.0.0:3001->3001/tcp
+schedy-redis    Up        0.0.0.0:6379->6379/tcp
+schedy-nginx    Up        0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
+
+Redis: PONG
+Application: {"status":"healthy",...}
+```
+
+## 🌐 Bước 4: Truy Cập Ứng Dụng
+
+```bash
+# Kiểm tra URL từ .env.production
+echo $NEXTAUTH_URL
+
+# Hoặc truy cập trực tiếp
+curl http://localhost:3001/api/health
+```
+
+Mở browser và truy cập:
+- **HTTP**: `http://your-vps-ip` hoặc `http://schedy.zido.me`
+- **HTTPS**: `https://schedy.zido.me` (sau khi setup SSL)
+
+## 📊 Các Lệnh Hữu Ích
+
+### Xem Logs
+
+```bash
+# Logs của app
+./deploy.sh logs app
+
+# Logs của Redis
+./deploy.sh logs redis
+
+# Logs của Nginx
+./deploy.sh logs nginx
+
+# Tất cả logs
+docker-compose logs -f
+```
+
+### Quản Lý Services
+
+```bash
+# Restart services
+./deploy.sh restart
+
+# Stop services
+./deploy.sh down
+
+# Start lại
+./deploy.sh up
+```
+
+### Database
+
+```bash
+# Chạy migrations thủ công
+./deploy.sh migrate
+
+# Backup database
+./deploy.sh backup
+
+# Restore database
+./deploy.sh restore ./backups/schedy_backup_20241216_100000.db
+```
+
+### Update Code
+
+```bash
+# Pull code mới
+git pull origin master
+
+# Rebuild image
+./build-vps-safe.sh
+
+# Restart services
+./deploy.sh restart
+
+# Hoặc all-in-one
+git pull && ./build-vps-safe.sh && ./deploy.sh restart
+```
+
+## 🔒 Bước 5: Setup SSL (Khuyến nghị)
+
+```bash
+# Setup SSL với Let's Encrypt
+./deploy.sh setup-ssl schedy.zido.me admin@yourdomain.com
+
+# Hoặc thủ công:
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d schedy.zido.me -d www.schedy.zido.me
+```
+
+## 🐛 Troubleshooting
+
+### Container không start?
+
+```bash
+# Check logs
+./deploy.sh logs app
+
+# Check environment
+cat .env.production
+
+# Check ports
+netstat -tuln | grep 3001
+```
+
+### Redis không kết nối?
+
+```bash
+# Check Redis container
+docker ps | grep redis
+
+# Test Redis connection
+docker exec schedy-redis redis-cli ping
+```
+
+### Database migration failed?
+
+```bash
+# Check migration status
+docker exec schedy-app npx prisma migrate status
+
+# Run migration manually
+./deploy.sh migrate
+```
+
+### App không accessible?
+
+```bash
+# Check Nginx logs
+./deploy.sh logs nginx
+
+# Check Nginx config
+docker exec schedy-nginx nginx -t
+
+# Restart Nginx
+docker restart schedy-nginx
+```
+
+## 📝 Checklist Sau Khi Deploy
+
+- [ ] `.env.production` đã được cấu hình đúng
+- [ ] Tất cả services đang chạy (`./deploy.sh health`)
+- [ ] Database migrations đã chạy thành công
+- [ ] Có thể truy cập app qua browser
+- [ ] SSL đã được setup (nếu cần)
+- [ ] Social media apps đã được tạo và cấu hình
+- [ ] Callback URLs đã được update trong social apps
+- [ ] Đã test đăng nhập/đăng ký
+- [ ] Đã test kết nối social media profiles
+
+## 🎯 Quick Reference
+
+```bash
+# Deploy lần đầu
+cp env.production.example .env.production
+nano .env.production  # Điền thông tin
+./deploy.sh up
+
+# Update code
+git pull && ./build-vps-safe.sh && ./deploy.sh restart
+
+# Xem logs
+./deploy.sh logs app
+
+# Backup
+./deploy.sh backup
+
+# Health check
+./deploy.sh health
+```
+
+---
+
+**Chúc mừng! App của bạn đã sẵn sàng! 🎉**
