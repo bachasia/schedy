@@ -338,6 +338,14 @@ export default function PostsPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => router.push(`/posts/${post.id}`)}
+                      title="View post details"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => router.push(`/posts/${post.id}/edit`)}
                       title="Edit post"
                     >
