@@ -25,6 +25,10 @@ services:
       # Enable BuildKit for faster builds
       args:
         BUILDKIT_INLINE_CACHE: 1
+      # Use BuildKit cache
+      cache_from:
+        - schedy:latest
+    image: schedy:latest
     container_name: schedy-app
     restart: unless-stopped
     ports:
@@ -81,4 +85,8 @@ volumes:
     driver: local
   app-data:
     driver: local
+
+
+
+
 

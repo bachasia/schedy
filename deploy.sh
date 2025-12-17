@@ -34,11 +34,53 @@ check_env() {
     fi
 }
 
-# Build Docker images
+# Build Docker images with BuildKit optimization
 build() {
-    log_info "Building Docker images..."
-    docker-compose build --no-cache
+    USE_CACHE=${1:-true}
+    SAFE_MODE=${2:-false}
+    
+    # Check available memory for safe mode
+    if [ "$SAFE_MODE" = "auto" ]; then
+        MEM_AVAIL=$(free -m | awk 'NR==2{printf "%.0f", $7}' 2>/dev/null || echo "2048")
+        if [ "$MEM_AVAIL" -lt 1024 ]; then
+            SAFE_MODE="true"
+            log_warn "Low memory detected (${MEM_AVAIL}MB). Using safe build mode..."
+        fi
+    fi
+    
+    if [ "$SAFE_MODE" = "true" ]; then
+        log_info "Using safe build mode (prevents OOM)..."
+        if [ -f "./build-vps-safe.sh" ]; then
+            chmod +x ./build-vps-safe.sh
+            ./build-vps-safe.sh --mode safe
+        else
+            log_warn "build-vps-safe.sh not found. Using standard build..."
+            build_standard "$USE_CACHE"
+        fi
+    else
+        build_standard "$USE_CACHE"
+    fi
+    
     log_info "Build completed!"
+}
+
+# Standard build function
+build_standard() {
+    USE_CACHE=$1
+    
+    log_info "Building Docker images with BuildKit..."
+    
+    # Enable BuildKit for faster builds
+    export DOCKER_BUILDKIT=1
+    export COMPOSE_DOCKER_CLI_BUILD=1
+    
+    if [ "$USE_CACHE" = "false" ]; then
+        log_warn "Building without cache..."
+        docker-compose build --no-cache
+    else
+        log_info "Building with cache (faster rebuilds)..."
+        docker-compose build
+    fi
 }
 
 # Start services
@@ -185,7 +227,13 @@ setup_ssl() {
 # Main script
 case "$1" in
     build)
-        build
+        build ${2:-true} ${3:-auto}
+        ;;
+    build-no-cache)
+        build false auto
+        ;;
+    build-safe)
+        build true true
         ;;
     up)
         up
@@ -220,8 +268,10 @@ case "$1" in
         echo "Usage: ./deploy.sh [command]"
         echo ""
         echo "Commands:"
-        echo "  build              Build Docker images"
-        echo "  up                 Start all services"
+        echo "  build [cache] [safe]  Build Docker images (with cache by default)"
+        echo "  build-no-cache         Build Docker images without cache"
+        echo "  build-safe             Build using safe mode (prevents OOM on low-memory VPS)"
+        echo "  up                     Start all services"
         echo "  down               Stop all services"
         echo "  restart            Restart all services"
         echo "  logs [service]     View logs (default: app)"
@@ -239,4 +289,8 @@ case "$1" in
         echo "  ./deploy.sh setup-ssl example.com admin@example.com"
         ;;
 esac
+
+
+
+
 
