@@ -79,7 +79,7 @@ model Post {
   profileId      String
   content        String
   mediaUrls      String
-  mediaType      MediaType
+  mediaType      MediaType?
   platform       Platform
   status         PostStatus  @default(DRAFT)
   scheduledAt    DateTime?
