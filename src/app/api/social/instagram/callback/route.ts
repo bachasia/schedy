@@ -46,8 +46,12 @@ export async function GET(request: Request) {
 
   // Placeholder success response
   return NextResponse.redirect(
-    new URL("/profiles?success=instagram_connected", request.url),
+    new URL("/profiles?success=instagram_connected", getBaseUrl(request)),
   );
 }
+
+
+
+
 
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBaseUrl } from "@/lib/utils/url";
 import { prisma } from "@/lib/prisma";
 import { 
   exchangeTikTokCode, 
@@ -137,17 +138,18 @@ export async function GET(request: NextRequest) {
 
     // Redirect to profiles page with success message
     return NextResponse.redirect(
-      new URL("/profiles?success=TikTok+connected+successfully", request.url)
+      new URL("/profiles?success=TikTok+connected+successfully", getBaseUrl(request))
     );
   } catch (error) {
     console.error("[TikTok Callback] Error processing callback:", error);
     
     const errorMessage = handleTikTokError(error);
+    const baseUrl = getBaseUrl(request);
     
     return NextResponse.redirect(
       new URL(
         `/profiles?error=${encodeURIComponent(errorMessage)}`,
-        request.url
+        baseUrl
       )
     );
   }

@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { getBaseUrl } from "@/lib/utils/url";
 import { auth } from "@/lib/auth";
 import {
   exchangeTwitterCode,
@@ -140,13 +141,15 @@ export async function GET(request: NextRequest) {
     console.log(`[Twitter] Profile connected successfully: @${userInfo.username}`);
 
     // Redirect to profiles page with success message
-    const successUrl = new URL("/profiles", request.url);
+    const baseUrl = getBaseUrl(request);
+    const successUrl = new URL("/profiles", baseUrl);
     successUrl.searchParams.set("success", `Twitter account @${userInfo.username} connected successfully!`);
     return NextResponse.redirect(successUrl);
   } catch (error: any) {
     console.error("[Twitter] Error in OAuth callback:", error);
     
-    const errorUrl = new URL("/profiles", request.url);
+    const baseUrl = getBaseUrl(request);
+    const errorUrl = new URL("/profiles", baseUrl);
     errorUrl.searchParams.set(
       "error",
       `Failed to connect Twitter account: ${error.message || "Unknown error"}`

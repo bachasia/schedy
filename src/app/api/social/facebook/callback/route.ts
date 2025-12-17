@@ -6,12 +6,14 @@ import {
   getUserPages,
   getInstagramAccount,
 } from "@/lib/social/facebook";
+import { getBaseUrl } from "@/lib/utils/url";
 
 /**
  * Handle Facebook OAuth callback
  * GET /api/social/facebook/callback?code=...&state=...
  */
 export async function GET(request: NextRequest) {
+  const baseUrl = getBaseUrl(request);
   try {
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get("code");
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/profiles?error=${encodeURIComponent("Facebook connection was cancelled or denied")}`,
-          request.url,
+          baseUrl,
         ),
       );
     }
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/profiles?error=${encodeURIComponent("Invalid OAuth callback parameters")}`,
-          request.url,
+          baseUrl,
         ),
       );
     }
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/profiles?error=${encodeURIComponent("Invalid state parameter")}`,
-          request.url,
+          baseUrl,
         ),
       );
     }
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/profiles?error=${encodeURIComponent("OAuth session expired. Please try again.")}`,
-          request.url,
+          baseUrl,
         ),
       );
     }
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/profiles?error=${encodeURIComponent("User not found")}`,
-          request.url,
+          baseUrl,
         ),
       );
     }
@@ -94,7 +96,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL(
           `/profiles?error=${encodeURIComponent("No Facebook Pages found. Please create a Facebook Page first.")}`,
-          request.url,
+          baseUrl,
         ),
       );
     }
@@ -212,7 +214,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       new URL(
         `/profiles?success=${encodeURIComponent(successMessage)}`,
-        request.url,
+        baseUrl,
       ),
     );
   } catch (error) {
@@ -224,7 +226,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       new URL(
         `/profiles?error=${encodeURIComponent(errorMessage)}`,
-        request.url,
+        baseUrl,
       ),
     );
   }
