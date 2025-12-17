@@ -64,8 +64,7 @@ openssl rand -base64 32
 Script này sẽ:
 - ✅ Kiểm tra `.env.production` tồn tại
 - ✅ Start Redis container
-- ✅ Start App container
-- ✅ Start Nginx container
+- ✅ Start App container (chạy trực tiếp trên port 80 và 3001)
 - ✅ Chạy database migrations tự động
 - ✅ Hiển thị URL để truy cập
 
@@ -82,9 +81,8 @@ Script này sẽ:
 
 Docker containers:
 NAME            STATUS    PORTS
-schedy-app      Up        0.0.0.0:3001->3001/tcp
+schedy-app      Up        0.0.0.0:80->3001/tcp, 0.0.0.0:3001->3001/tcp
 schedy-redis    Up        0.0.0.0:6379->6379/tcp
-schedy-nginx    Up        0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
 
 Redis: PONG
 Application: {"status":"healthy",...}
@@ -101,8 +99,9 @@ curl http://localhost:3001/api/health
 ```
 
 Mở browser và truy cập:
-- **HTTP**: `http://your-vps-ip` hoặc `http://schedy.zido.me`
-- **HTTPS**: `https://schedy.zido.me` (sau khi setup SSL)
+- **HTTP**: `http://your-vps-ip` hoặc `http://schedy.zido.me` (port 80)
+- **Direct**: `http://your-vps-ip:3001` (port 3001)
+- **HTTPS**: Cần setup reverse proxy (Cloudflare, Caddy, hoặc Traefik) nếu muốn HTTPS
 
 ## 📊 Các Lệnh Hữu Ích
 
@@ -114,9 +113,6 @@ Mở browser và truy cập:
 
 # Logs của Redis
 ./deploy.sh logs redis
-
-# Logs của Nginx
-./deploy.sh logs nginx
 
 # Tất cả logs
 docker-compose logs -f
@@ -164,16 +160,14 @@ git pull origin master
 git pull && ./build-vps-safe.sh && ./deploy.sh restart
 ```
 
-## 🔒 Bước 5: Setup SSL (Khuyến nghị)
+## 🔒 Bước 5: Setup SSL (Tùy chọn)
 
-```bash
-# Setup SSL với Let's Encrypt
-./deploy.sh setup-ssl schedy.zido.me admin@yourdomain.com
+Nếu không dùng Nginx, bạn có thể:
+- **Cloudflare**: Dùng Cloudflare Proxy (miễn phí) để có HTTPS
+- **Caddy**: Reverse proxy tự động SSL
+- **Traefik**: Container-based reverse proxy
 
-# Hoặc thủ công:
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d schedy.zido.me -d www.schedy.zido.me
-```
+Hoặc setup SSL trực tiếp với certbot và reverse proxy khác.
 
 ## 🐛 Troubleshooting
 
@@ -213,14 +207,17 @@ docker exec schedy-app npx prisma migrate status
 ### App không accessible?
 
 ```bash
-# Check Nginx logs
-./deploy.sh logs nginx
+# Check app logs
+./deploy.sh logs app
 
-# Check Nginx config
-docker exec schedy-nginx nginx -t
+# Check port 80
+netstat -tuln | grep 80
 
-# Restart Nginx
-docker restart schedy-nginx
+# Test app directly
+curl http://localhost:3001/api/health
+
+# Restart app
+docker-compose restart app
 ```
 
 ## 📝 Checklist Sau Khi Deploy

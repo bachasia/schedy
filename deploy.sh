@@ -220,8 +220,7 @@ setup_ssl() {
         --no-eff-email
     
     log_info "SSL certificate obtained!"
-    log_info "Restarting nginx..."
-    docker-compose restart nginx
+    log_info "Note: SSL setup complete. Configure your reverse proxy or load balancer to use the certificate."
 }
 
 # Main script
