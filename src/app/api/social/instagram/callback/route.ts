@@ -1,16 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { getBaseUrl } from "@/lib/utils/url";
 
 /**
  * Instagram OAuth callback endpoint
  * Phase 2: Will handle OAuth flow and exchange code for access token
  * Phase 1: Placeholder that returns success
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const session = await auth();
+  const baseUrl = getBaseUrl(request);
 
   if (!session?.user?.id) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", baseUrl));
   }
 
   const { searchParams } = new URL(request.url);
@@ -20,13 +22,13 @@ export async function GET(request: Request) {
   if (error) {
     console.error("Instagram OAuth error:", error);
     return NextResponse.redirect(
-      new URL("/profiles?error=instagram_auth_failed", request.url),
+      new URL("/profiles?error=instagram_auth_failed", baseUrl),
     );
   }
 
   if (!code) {
     return NextResponse.redirect(
-      new URL("/profiles?error=missing_code", request.url),
+      new URL("/profiles?error=missing_code", baseUrl),
     );
   }
 
