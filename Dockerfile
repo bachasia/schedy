@@ -7,7 +7,10 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Use --no-cache and clean npm cache to save space
+RUN npm ci --no-audit --prefer-offline --no-fund && \
+    npm cache clean --force && \
+    rm -rf /tmp/* /var/tmp/*
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
@@ -25,10 +28,13 @@ ENV NEXT_PRIVATE_SKIP_TURBO=1
 
 # Generate Prisma Client (DATABASE_URL not needed for generate, but required by config)
 ENV DATABASE_URL="file:./prisma/dev.db"
-RUN npx prisma generate
+RUN npx prisma generate && \
+    npm cache clean --force
 
 # Build Next.js application
-RUN npm run build
+RUN npm run build && \
+    rm -rf /tmp/* /var/tmp/* && \
+    npm cache clean --force
 
 # Stage 3: Runner (Production)
 FROM node:20-alpine AS runner
