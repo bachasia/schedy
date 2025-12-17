@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { existsSync } from "fs";
-import path from "path";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
+import { uploadToR2, generateR2Key } from "@/lib/storage/r2";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
@@ -70,50 +68,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split(".").pop() || "bin";
-    const filename = `${timestamp}-${random}.${extension}`;
-
-    // Create upload directory path
-    // For now, we'll use a temporary postId. In production, this should be the actual post ID
-    const tempPostId = "temp";
-    const uploadDir = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      userId,
-      tempPostId,
-    );
-
-    // Ensure directory exists
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Save file
-    const filePath = path.join(uploadDir, filename);
+    // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
 
-    // Generate public URL
-    const url = `/uploads/${userId}/${tempPostId}/${filename}`;
+    // Upload to Cloudflare R2
+    const filename = file.name;
+    const key = generateR2Key(userId, filename);
+    const url = await uploadToR2(buffer, key, file.type);
 
     return NextResponse.json({
       success: true,
       url,
-      filename,
+      filename: key.split("/").pop() || filename,
       size: file.size,
       type: isImage ? "image" : "video",
     });
   } catch (error) {
     console.error("Upload error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: errorMessage },
       { status: 500 },
     );
   }
 }
+
+
+
+
 
 

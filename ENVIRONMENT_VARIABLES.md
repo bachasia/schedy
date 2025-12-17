@@ -71,6 +71,19 @@ TIKTOK_REDIRECT_URI="http://localhost:3001/api/social/tiktok/callback"
 
 
 # ================================
+# CLOUDFLARE R2 (Media Storage)
+# ================================
+# Get these from Cloudflare Dashboard > R2 > Manage R2 API Tokens
+R2_ACCOUNT_ID="your-r2-account-id"
+R2_ACCESS_KEY_ID="your-r2-access-key-id"
+R2_SECRET_ACCESS_KEY="your-r2-secret-access-key"
+R2_BUCKET_NAME="your-bucket-name"
+# Public URL for accessing uploaded files
+# Format: https://[your-domain]/uploads or https://[account-id].r2.cloudflarestorage.com/[bucket]
+R2_PUBLIC_URL="https://your-domain.com"
+
+
+# ================================
 # APPLICATION SETTINGS
 # ================================
 NODE_ENV="development"
@@ -334,6 +347,10 @@ Visit: `http://localhost:3001/api/test-env`
 ---
 
 **Ready to go!** Copy the variables, fill in the values, and start developing! 🚀
+
+
+
+
 
 
 

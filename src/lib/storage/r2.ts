@@ -1,0 +1,87 @@
+﻿/**
+ * Cloudflare R2 Storage Integration
+ * R2 is S3-compatible, so we use AWS SDK
+ */
+
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+// Initialize R2 client
+function getR2Client() {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error(
+      "R2 credentials not configured. Please set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY environment variables.",
+    );
+  }
+
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+  });
+}
+
+/**
+ * Upload a file to Cloudflare R2
+ * @param file - File buffer
+ * @param key - Object key (path) in R2 bucket
+ * @param contentType - MIME type of the file
+ * @returns Public URL of the uploaded file
+ */
+export async function uploadToR2(
+  file: Buffer,
+  key: string,
+  contentType: string,
+): Promise<string> {
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const publicUrl = process.env.R2_PUBLIC_URL;
+
+  if (!bucketName) {
+    throw new Error("R2_BUCKET_NAME environment variable is not set");
+  }
+
+  if (!publicUrl) {
+    throw new Error("R2_PUBLIC_URL environment variable is not set");
+  }
+
+  const client = getR2Client();
+
+  try {
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      Body: file,
+      ContentType: contentType,
+    });
+
+    await client.send(command);
+
+    // Return public URL
+    return `${publicUrl}/${key}`;
+  } catch (error) {
+    console.error("[R2] Upload error:", error);
+    throw new Error(`Failed to upload file to R2: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Generate a unique key for a file in R2
+ * @param userId - User ID
+ * @param filename - Original filename
+ * @returns R2 object key
+ */
+export function generateR2Key(userId: string, filename: string): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 15);
+  const extension = filename.split(".").pop() || "bin";
+  const sanitizedFilename = `${timestamp}-${random}.${extension}`;
+
+  // Structure: uploads/[userId]/[filename]
+  return `uploads/${userId}/${sanitizedFilename}`;
+}
