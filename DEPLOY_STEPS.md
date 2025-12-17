@@ -95,7 +95,7 @@ Application: {"status":"healthy",...}
 echo $NEXTAUTH_URL
 
 # Hoặc truy cập trực tiếp
-curl http://localhost:3001/api/health
+curl http://localhost:3100/api/health
 ```
 
 Mở browser và truy cập:
