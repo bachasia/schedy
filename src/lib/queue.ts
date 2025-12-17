@@ -60,7 +60,6 @@ try {
   // During build time, Redis may not be available - this is OK
   // Create a minimal mock queue for build time
   console.warn("[Queue] Queue initialization skipped (OK during build)");
-  // @ts-expect-error - Mock queue for build time
   socialPostsQueue = {
     add: () => Promise.resolve({ id: "dummy" } as any),
     process: () => {},
