@@ -94,10 +94,11 @@ scripts/
 .travis.yml
 .circleci/
 
-# Prisma (keep schema, ignore db files)
+# Prisma (keep schema, ignore db files and Prisma 7 config)
 prisma/*.db
 prisma/*.db-journal
 prisma/migrations/*.sql
+prisma.config.ts
 !prisma/schema.prisma
 !prisma/migrations/migration_lock.toml
 
