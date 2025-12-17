@@ -7,12 +7,7 @@ Docker build fails with: `ENOSPC: no space left on device, write`
 
 ### 1. Clean Up Docker Resources (Recommended First Step)
 
-**Windows PowerShell:**
-```powershell
-.\cleanup-docker.ps1
-```
-
-**Or manually:**
+**Manually run these commands:**
 ```bash
 # Check current disk usage
 docker system df
@@ -102,7 +97,7 @@ npm run dev
 
 ## Prevention
 
-1. **Regular Cleanup**: Run cleanup script weekly
+1. **Regular Cleanup**: Run `docker system prune` commands regularly
 2. **Monitor Space**: Check `docker system df` regularly
 3. **Remove Old Images**: Don't keep old image versions
 4. **Use .dockerignore**: Already configured to exclude unnecessary files

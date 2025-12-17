@@ -1,8 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   output: "standalone", // Required for Docker deployment
+  
+  // Optimize build performance
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      'date-fns',
+    ],
+  },
   
   // Mark Bull and related packages as external (server-only)
   // These packages use Node.js features like fork() that don't work with bundlers
@@ -24,7 +35,23 @@ const nextConfig: NextConfig = {
         "@bull-board/express": "commonjs @bull-board/express",
         express: "commonjs express",
       });
+      
+      // Optimize webpack for faster builds
+      config.optimization = {
+        ...config.optimization,
+        moduleIds: 'deterministic',
+        minimize: true,
+      };
     }
+    
+    // Speed up builds by reducing file system calls
+    config.cache = {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename],
+      },
+    };
+    
     return config;
   },
 };

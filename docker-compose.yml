@@ -22,6 +22,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # Enable BuildKit for faster builds
+      args:
+        BUILDKIT_INLINE_CACHE: 1
     container_name: schedy-app
     restart: unless-stopped
     ports:
