@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET ?? "development-secret-change-in-production",
+  trustHost: true, // Trust all hosts in production (required for Docker/VPS)
   session: {
     strategy: "jwt",
   },

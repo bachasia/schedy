@@ -48,19 +48,30 @@ try {
     },
   });
 
-  // Handle connection errors gracefully (especially during build)
-  socialPostsQueue.on("error", (error) => {
+  // Handle connection errors gracefully
+  socialPostsQueue.on("error", (error: any) => {
     // Suppress errors during build time
-    // Check for build time indicators
-    const isBuildTime = 
-      process.env.NEXT_PHASE === "phase-production-build" ||
-      process.env.NODE_ENV === "production" && !process.env.REDIS_HOST ||
-      typeof process.env.NEXT_RUNTIME === "undefined";
+    const isBuildTime = process.env.NEXT_PHASE === "phase-production-build";
     
     if (isBuildTime) {
       // Silently ignore during build - Redis is not available
       return;
     }
+    
+    // In runtime, only log if it's a connection error and Redis might not be ready yet
+    // Don't spam logs if Redis is temporarily unavailable
+    if (error?.code === "ECONNREFUSED") {
+      // Only log once per minute to avoid spam
+      const lastLogTime = (global as any).__lastQueueErrorLog || 0;
+      const now = Date.now();
+      if (now - lastLogTime > 60000) { // Log max once per minute
+        console.warn("[Queue] Redis connection refused - queue operations will retry automatically");
+        (global as any).__lastQueueErrorLog = now;
+      }
+      return;
+    }
+    
+    // Log other errors
     console.error("[Queue] Queue error:", error);
   });
 } catch (error) {
