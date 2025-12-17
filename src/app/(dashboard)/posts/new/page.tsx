@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useForm } from "react-hook-form";
@@ -77,12 +77,12 @@ export default function NewPostPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<any[]>([]);
 
-  // Wrapper to log media changes
-  const handleMediaChange = (files: any[]) => {
+  // Wrapper to log media changes - memoized to prevent unnecessary re-renders
+  const handleMediaChange = useCallback((files: any[]) => {
     console.log("[NewPost] handleMediaChange called with files:", files);
     console.log("[NewPost] Files with URLs:", files.filter(f => f.url).map(f => ({ id: f.id, url: f.url })));
     setMediaFiles(files);
-  };
+  }, []);
 
   const {
     register,
