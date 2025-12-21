@@ -65,6 +65,8 @@ interface FacebookPostResponse {
 
 interface InstagramContainerResponse {
   id: string;
+  status_code?: string;
+  status?: string;
 }
 
 interface InstagramPublishResponse {
@@ -444,12 +446,65 @@ export async function publishToInstagram(
     }
 
     const container: InstagramContainerResponse = await containerResponse.json();
+    const containerId = container.id;
 
-    // Step 2: Publish container
+    console.log(`[Instagram API] Created container ${containerId}, status: ${container.status_code || container.status}`);
+
+    // Step 2: Wait for container to be ready (especially important for Reels/videos)
+    // Poll container status until it's ready
+    if (isVideoPost) {
+      console.log(`[Instagram API] Waiting for video container to be processed...`);
+      let containerReady = false;
+      let attempts = 0;
+      const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max wait
+      const pollInterval = 2000; // 2 seconds
+
+      while (!containerReady && attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        attempts++;
+
+        try {
+          const statusResponse = await fetch(
+            `${FACEBOOK_GRAPH_URL}/${containerId}?fields=status_code&access_token=${accessToken}`,
+          );
+
+          if (statusResponse.ok) {
+            const statusData: InstagramContainerResponse = await statusResponse.json();
+            const statusCode = statusData.status_code || statusData.status;
+
+            console.log(`[Instagram API] Container ${containerId} status check ${attempts}/${maxAttempts}: ${statusCode}`);
+
+            if (statusCode === "FINISHED") {
+              containerReady = true;
+              console.log(`[Instagram API] Container ${containerId} is ready for publishing`);
+            } else if (statusCode === "ERROR") {
+              throw new Error(`Container processing failed with status: ${statusCode}`);
+            }
+            // If status is "IN_PROGRESS" or other, continue polling
+          } else {
+            console.warn(`[Instagram API] Failed to check container status: ${statusResponse.statusText}`);
+          }
+        } catch (error) {
+          console.warn(`[Instagram API] Error checking container status:`, error);
+          // Continue polling on error
+        }
+      }
+
+      if (!containerReady) {
+        throw new Error(
+          `Container ${containerId} did not become ready after ${maxAttempts * (pollInterval / 1000)} seconds. ` +
+          `This may indicate the video is too large or there's an issue with the media file.`
+        );
+      }
+    }
+
+    // Step 3: Publish container
     const publishData = {
-      creation_id: container.id,
+      creation_id: containerId,
       access_token: accessToken,
     };
+
+    console.log(`[Instagram API] Publishing container ${containerId}...`);
 
     const publishResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media_publish`, {
       method: "POST",
