@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MediaUpload } from "@/components/post/MediaUpload";
 import { PostPreview } from "@/components/post/PostPreview";
 import { ScheduleForm } from "@/components/post/ScheduleForm";
@@ -76,6 +77,7 @@ export default function NewPostPage() {
   const [activeTab, setActiveTab] = useState("content");
   const [isSaving, setIsSaving] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<any[]>([]);
+  const [postFormat, setPostFormat] = useState<"POST" | "REEL">("POST");
 
   // Wrapper to log media changes - memoized to prevent unnecessary re-renders
   const handleMediaChange = useCallback((files: any[]) => {
@@ -163,6 +165,26 @@ export default function NewPostPage() {
         return;
       }
 
+      // Validate Reel requirements
+      if (postFormat === "REEL") {
+        const videoFiles = mediaFiles.filter((f) => f.type === "video");
+        if (videoFiles.length === 0) {
+          alert("Reels require at least one video file. Please upload a video.");
+          setIsSaving(false);
+          return;
+        }
+        if (videoFiles.length > 1) {
+          alert("Reels can only have one video. Please remove extra videos.");
+          setIsSaving(false);
+          return;
+        }
+        if (mediaFiles.some((f) => f.type === "image")) {
+          alert("Reels cannot include images. Please remove images or switch to Post format.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
       const mediaUrls = mediaFiles
         .filter((f) => f.url)
         .map((f) => f.url as string);
@@ -223,6 +245,26 @@ export default function NewPostPage() {
         return;
       }
 
+      // Validate Reel requirements
+      if (postFormat === "REEL") {
+        const videoFiles = mediaFiles.filter((f) => f.type === "video");
+        if (videoFiles.length === 0) {
+          alert("Reels require at least one video file. Please upload a video.");
+          setIsSaving(false);
+          return;
+        }
+        if (videoFiles.length > 1) {
+          alert("Reels can only have one video. Please remove extra videos.");
+          setIsSaving(false);
+          return;
+        }
+        if (mediaFiles.some((f) => f.type === "image")) {
+          alert("Reels cannot include images. Please remove images or switch to Post format.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
       const mediaUrls = mediaFiles
         .filter((f) => f.url)
         .map((f) => f.url as string);
@@ -242,6 +284,7 @@ export default function NewPostPage() {
         profileIds: selectedProfileIds,
         mediaUrls,
         mediaType,
+        postFormat,
         status,
         scheduledAt: scheduledAt ? scheduledAt.toISOString() : undefined,
       });
@@ -433,6 +476,45 @@ export default function NewPostPage() {
                   </div>
                 )}
               </div>
+
+              {/* Post Format Selector */}
+              {selectedProfiles.length > 0 && selectedProfiles.some(p => p.platform === "FACEBOOK" || p.platform === "INSTAGRAM") && (
+                <div className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+                  <Label className="text-base font-semibold">
+                    Post Format
+                  </Label>
+                  <Select
+                    value={postFormat}
+                    onValueChange={(value: "POST" | "REEL") => {
+                      setPostFormat(value);
+                      // If switching to REEL and no video, show warning
+                      if (value === "REEL" && !mediaFiles.some(f => f.type === "video")) {
+                        // Will be validated on submit
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="POST">Post</SelectItem>
+                      <SelectItem value="REEL">Reel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-zinc-500">
+                    {postFormat === "REEL" 
+                      ? "Reels require a single vertical video (9:16, 15-90 seconds)"
+                      : "Regular posts can include text, images, or videos"}
+                  </p>
+                  {postFormat === "REEL" && mediaFiles.length > 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+                      {mediaFiles.some(f => f.type === "video") 
+                        ? "✓ Video detected. Make sure it's vertical (9:16) and 15-90 seconds."
+                        : "⚠ Reels require a video file. Please upload a video in the Media tab."}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Content Input */}
               <div className="space-y-3">

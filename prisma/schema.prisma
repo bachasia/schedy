@@ -23,6 +23,14 @@ enum MediaType {
   CAROUSEL
 }
 
+/// Post format type (regular post, reel, short, story)
+enum PostFormat {
+  POST    // Regular post
+  REEL    // Reel (Facebook/Instagram)
+  SHORT   // Short (YouTube/TikTok)
+  STORY   // Story (temporary)
+}
+
 /// Lifecycle state of a post
 enum PostStatus {
   DRAFT
@@ -80,6 +88,7 @@ model Post {
   content        String
   mediaUrls      String
   mediaType      MediaType?
+  postFormat     PostFormat  @default(POST)
   platform       Platform
   status         PostStatus  @default(DRAFT)
   scheduledAt    DateTime?

@@ -208,11 +208,13 @@ export async function getInstagramAccount(
  * @param profileId - Profile ID from database
  * @param content - Post content/message
  * @param mediaUrls - Array of media URLs (optional)
+ * @param postFormat - Post format (POST or REEL)
  */
 export async function publishToFacebook(
   profileId: string,
   content: string,
   mediaUrls?: string[],
+  postFormat: "POST" | "REEL" = "POST",
 ): Promise<FacebookPostResponse> {
   // Get profile with access token
   const profile = await prisma.profile.findUnique({
@@ -244,6 +246,7 @@ export async function publishToFacebook(
   // Handle media
   console.log(`[Facebook API] Media URLs received:`, mediaUrls);
   console.log(`[Facebook API] Media count:`, mediaUrls?.length || 0);
+  console.log(`[Facebook API] Post format:`, postFormat);
   
   if (mediaUrls && mediaUrls.length > 0) {
     console.log(`[Facebook API] Processing media post with ${mediaUrls.length} file(s)`);
@@ -252,20 +255,27 @@ export async function publishToFacebook(
       const mediaUrl = mediaUrls[0];
       console.log(`[Facebook API] Single media URL:`, mediaUrl);
       if (isVideo(mediaUrl)) {
-        // Video post
-        postData.file_url = mediaUrl;
-        const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(postData),
-        });
+        // Video post or Reel
+        if (postFormat === "REEL") {
+          // Publish as Reel
+          console.log(`[Facebook API] Publishing as Reel`);
+          return await publishFacebookReel(pageId, accessToken, mediaUrl, content);
+        } else {
+          // Regular video post
+          postData.file_url = mediaUrl;
+          const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(postData),
+          });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(`Failed to publish video: ${error.error?.message || response.statusText}`);
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to publish video: ${error.error?.message || response.statusText}`);
+          }
+
+          return response.json();
         }
-
-        return response.json();
       } else {
         // Photo post
         postData.url = mediaUrl;
@@ -352,11 +362,13 @@ export async function publishToFacebook(
  * @param profileId - Profile ID from database
  * @param content - Post caption
  * @param mediaUrls - Array of media URLs (required for Instagram)
+ * @param postFormat - Post format (POST or REEL)
  */
 export async function publishToInstagram(
   profileId: string,
   content: string,
   mediaUrls?: string[],
+  postFormat: "POST" | "REEL" = "POST",
 ): Promise<InstagramPublishResponse> {
   if (!mediaUrls || mediaUrls.length === 0) {
     throw new Error("Instagram posts require at least one media file");
@@ -399,7 +411,14 @@ export async function publishToInstagram(
     };
 
     if (isVideoPost) {
-      containerData.media_type = "VIDEO";
+      // Determine media type based on post format
+      if (postFormat === "REEL") {
+        containerData.media_type = "REELS";
+        console.log(`[Instagram API] Publishing as Reel`);
+      } else {
+        containerData.media_type = "VIDEO";
+        console.log(`[Instagram API] Publishing as regular video`);
+      }
       containerData.video_url = mediaUrl;
     } else {
       containerData.image_url = mediaUrl;
@@ -504,6 +523,68 @@ export async function publishToInstagram(
 
     return publishResponse.json();
   }
+}
+
+/**
+ * Publish a Facebook Reel
+ * @param pageId - Facebook Page ID
+ * @param accessToken - Page access token
+ * @param videoUrl - URL to the video file
+ * @param description - Reel description/caption
+ */
+async function publishFacebookReel(
+  pageId: string,
+  accessToken: string,
+  videoUrl: string,
+  description: string,
+): Promise<FacebookPostResponse> {
+  console.log(`[Facebook API] Publishing Reel to page ${pageId}`);
+  
+  // Facebook Reels can be published using /videos endpoint with video_format_type parameter
+  // Alternative: Use /video_reels endpoint with 3-phase upload (more complex, requires direct file upload)
+  // For now, we'll use the simpler approach with video_format_type
+  
+  const reelData: any = {
+    file_url: videoUrl,
+    description: description,
+    video_format_type: "reels",
+    access_token: accessToken,
+  };
+
+  const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(reelData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error(`[Facebook API] Reel publish failed:`, error);
+    
+    // If video_format_type doesn't work, try without it (fallback to regular video)
+    if (error.error?.code === 100 || error.error?.message?.includes("video_format_type")) {
+      console.log(`[Facebook API] Falling back to regular video post`);
+      reelData.video_format_type = undefined;
+      const fallbackResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reelData),
+      });
+      
+      if (!fallbackResponse.ok) {
+        const fallbackError = await fallbackResponse.json();
+        throw new Error(`Failed to publish Reel: ${fallbackError.error?.message || fallbackResponse.statusText}`);
+      }
+      
+      return fallbackResponse.json();
+    }
+    
+    throw new Error(`Failed to publish Reel: ${error.error?.message || response.statusText}`);
+  }
+
+  const result = await response.json();
+  console.log(`[Facebook API] Reel published successfully:`, result);
+  return result;
 }
 
 /**

@@ -248,15 +248,16 @@ async function publishToSocialMedia(
   post: any,
   profile: any,
 ): Promise<{ platformPostId: string; metadata?: any }> {
-  const { platform, content, mediaUrls } = post;
+  const { platform, content, mediaUrls, postFormat } = post;
+  const format = postFormat || "POST";
 
   try {
     switch (platform) {
       case "FACEBOOK":
-        return await publishToFacebook(post.id, profile.id, content, mediaUrls);
+        return await publishToFacebook(post.id, profile.id, content, mediaUrls, format);
 
       case "INSTAGRAM":
-        return await publishToInstagram(post.id, profile.id, content, mediaUrls);
+        return await publishToInstagram(post.id, profile.id, content, mediaUrls, format);
 
       case "TWITTER":
         return await publishToTwitter(post.id, profile.id, content, mediaUrls);
@@ -291,8 +292,10 @@ async function publishToFacebook(
   profileId: string,
   content: string,
   mediaUrls: string,
+  postFormat: "POST" | "REEL" = "POST",
 ): Promise<{ platformPostId: string; metadata?: any }> {
   console.log(`[Facebook] Publishing post ${postId} to profile ${profileId}`);
+  console.log(`[Facebook] Post format:`, postFormat);
   console.log(`[Facebook] Raw mediaUrls string:`, mediaUrls);
 
   // Parse media URLs (stored as comma-separated string in SQLite)
@@ -311,8 +314,8 @@ async function publishToFacebook(
     }
   }
 
-  // Call real Facebook API
-  const result = await publishToFacebookAPI(profileId, content, mediaArray);
+  // Call real Facebook API with postFormat
+  const result = await publishToFacebookAPI(profileId, content, mediaArray, postFormat);
 
   console.log(`[Facebook] Successfully published to Facebook. Post ID: ${result.id}`);
 
@@ -334,8 +337,10 @@ async function publishToInstagram(
   profileId: string,
   content: string,
   mediaUrls: string,
+  postFormat: "POST" | "REEL" = "POST",
 ): Promise<{ platformPostId: string; metadata?: any }> {
   console.log(`[Instagram] Publishing post ${postId} to profile ${profileId}`);
+  console.log(`[Instagram] Post format:`, postFormat);
 
   // Parse media URLs
   const mediaArray = mediaUrls ? mediaUrls.split(",").filter(Boolean) : [];
@@ -344,8 +349,8 @@ async function publishToInstagram(
     throw new Error("Instagram posts require at least one media file");
   }
 
-  // Call real Instagram API
-  const result = await publishToInstagramAPI(profileId, content, mediaArray);
+  // Call real Instagram API with postFormat
+  const result = await publishToInstagramAPI(profileId, content, mediaArray, postFormat);
 
   console.log(`[Instagram] Successfully published to Instagram. Post ID: ${result.id}`);
 

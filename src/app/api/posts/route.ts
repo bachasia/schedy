@@ -11,6 +11,7 @@ const createPostSchema = z.object({
   profileIds: z.array(z.string()).min(1, "At least one profile required"),
   mediaUrls: z.array(z.string()).optional(),
   mediaType: z.enum(["IMAGE", "VIDEO", "CAROUSEL"]).optional(),
+  postFormat: z.enum(["POST", "REEL", "SHORT", "STORY"]).optional().default("POST"),
   status: z.enum(["DRAFT", "SCHEDULED", "PUBLISHING", "PUBLISHED", "FAILED"]).default("DRAFT"),
   scheduledAt: z.string().optional(),
 });
@@ -72,13 +73,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const { content, profileIds, mediaUrls, mediaType, status, scheduledAt } = parsed.data;
+    const { content, profileIds, mediaUrls, mediaType, postFormat, status, scheduledAt } = parsed.data;
 
     console.log("[API] POST /api/posts - Parsed data:", {
       contentLength: content.length,
       profileIds,
       mediaUrlsCount: mediaUrls?.length || 0,
       mediaType,
+      postFormat,
       status,
       scheduledAt
     });
@@ -114,6 +116,7 @@ export async function POST(request: Request) {
         content,
         mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls.join(",") : "", // Convert array to comma-separated string
         platform: profile.platform,
+        postFormat: (postFormat || "POST") as "POST" | "REEL" | "SHORT" | "STORY",
         status: status as PostStatus,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       };
