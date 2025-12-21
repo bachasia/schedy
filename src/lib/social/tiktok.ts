@@ -135,17 +135,41 @@ export async function exchangeTikTokCode(code: string): Promise<TikTokTokenRespo
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to exchange TikTok code: ${error}`);
+    const errorText = await response.text();
+    let errorMessage = `Failed to exchange TikTok code: ${response.status} ${response.statusText}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+    } catch {
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
   
+  console.log("[TikTok] Token exchange response:", JSON.stringify(data, null, 2));
+  
+  // TikTok API returns data in different formats:
+  // - Success: { data: { access_token, ... } }
+  // - Error: { error: { code, message } }
   if (data.error) {
-    throw new Error(`TikTok token error: ${data.error.message || data.error}`);
+    throw new Error(`TikTok token error: ${data.error.message || data.error.code || JSON.stringify(data.error)}`);
   }
 
-  return data.data;
+  // Return data.data if exists, otherwise return data directly
+  if (data.data && data.data.access_token) {
+    return data.data as TikTokTokenResponse;
+  }
+  
+  // If data already has access_token at root level, return it
+  if (data.access_token) {
+    return data as TikTokTokenResponse;
+  }
+
+  // If neither format, log and throw
+  console.error("[TikTok] Unexpected token response format:", JSON.stringify(data, null, 2));
+  throw new Error(`Unexpected TikTok token response format: ${JSON.stringify(data)}`);
 }
 
 /**
@@ -170,17 +194,38 @@ export async function refreshTikTokAccessToken(refreshToken: string): Promise<Ti
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to refresh TikTok token: ${error}`);
+    const errorText = await response.text();
+    let errorMessage = `Failed to refresh TikTok token: ${response.status} ${response.statusText}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+    } catch {
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
+  
+  console.log("[TikTok] Token refresh response:", JSON.stringify(data, null, 2));
 
   if (data.error) {
-    throw new Error(`TikTok token refresh error: ${data.error.message || data.error}`);
+    throw new Error(`TikTok token refresh error: ${data.error.message || data.error.code || JSON.stringify(data.error)}`);
   }
 
-  return data.data;
+  // Return data.data if exists, otherwise return data directly
+  if (data.data && data.data.access_token) {
+    return data.data as TikTokTokenResponse;
+  }
+  
+  // If data already has access_token at root level, return it
+  if (data.access_token) {
+    return data as TikTokTokenResponse;
+  }
+
+  // If neither format, log and throw
+  console.error("[TikTok] Unexpected token refresh response format:", JSON.stringify(data, null, 2));
+  throw new Error(`Unexpected TikTok token refresh response format: ${JSON.stringify(data)}`);
 }
 
 /**
@@ -197,13 +242,28 @@ export async function getTikTokUserInfo(accessToken: string): Promise<TikTokUser
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to get TikTok user info: ${response.statusText}`);
+    const errorText = await response.text();
+    let errorMessage = `Failed to get TikTok user info: ${response.status} ${response.statusText}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+    } catch {
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   const data: TikTokUserInfoResponse = await response.json();
+  
+  console.log("[TikTok] User info response:", JSON.stringify(data, null, 2));
 
   if (data.error && data.error.code !== "ok") {
-    throw new Error(`TikTok API error: ${data.error.message}`);
+    throw new Error(`TikTok API error: ${data.error.message || data.error.code}`);
+  }
+
+  if (!data.data || !data.data.user) {
+    console.error("[TikTok] Unexpected user info response format:", JSON.stringify(data, null, 2));
+    throw new Error(`Unexpected TikTok user info response format: ${JSON.stringify(data)}`);
   }
 
   return data.data.user;
