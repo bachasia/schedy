@@ -28,3 +28,6 @@ echo ""
 echo "To run the container:"
 echo "  docker run -p 3100:3100 $TAG"
 
+
+
+
