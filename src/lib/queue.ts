@@ -355,10 +355,14 @@ async function publishToInstagram(
   console.log(`[Instagram] Successfully published to Instagram. Post ID: ${result.id}`);
 
   return {
-    platformPostId: result.id,
+    platformPostId: result.shortcode || result.id, // Use shortcode if available, fallback to media ID
     metadata: {
       platform: "instagram",
       publishedAt: new Date().toISOString(),
+      shortcode: result.shortcode,
+      mediaId: result.id,
+      media_type: result.media_type,
+      postFormat: postFormat,
     },
   };
 }

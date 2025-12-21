@@ -69,6 +69,14 @@ interface InstagramContainerResponse {
 
 interface InstagramPublishResponse {
   id: string;
+  shortcode?: string;
+  media_type?: string;
+}
+
+interface InstagramMediaInfo {
+  id: string;
+  shortcode?: string;
+  media_type?: string;
 }
 
 /**
@@ -454,7 +462,27 @@ export async function publishToInstagram(
       throw new Error(`Failed to publish Instagram post: ${error.error?.message || publishResponse.statusText}`);
     }
 
-    return publishResponse.json();
+    const publishResult: InstagramPublishResponse = await publishResponse.json();
+    const mediaId = publishResult.id;
+
+    // Query media info to get shortcode
+    try {
+      const mediaInfoResponse = await fetch(
+        `${FACEBOOK_GRAPH_URL}/${mediaId}?fields=shortcode,media_type&access_token=${accessToken}`,
+      );
+      if (mediaInfoResponse.ok) {
+        const mediaInfo: InstagramMediaInfo = await mediaInfoResponse.json();
+        return {
+          id: mediaId,
+          shortcode: mediaInfo.shortcode,
+          media_type: mediaInfo.media_type,
+        };
+      }
+    } catch (error) {
+      console.warn(`[Instagram] Failed to fetch shortcode for media ${mediaId}:`, error);
+    }
+
+    return publishResult;
   } else {
     // Carousel post (multiple images)
     const carouselItems: string[] = [];
@@ -521,7 +549,27 @@ export async function publishToInstagram(
       throw new Error(`Failed to publish carousel: ${error.error?.message || publishResponse.statusText}`);
     }
 
-    return publishResponse.json();
+    const publishResult: InstagramPublishResponse = await publishResponse.json();
+    const mediaId = publishResult.id;
+
+    // Query media info to get shortcode
+    try {
+      const mediaInfoResponse = await fetch(
+        `${FACEBOOK_GRAPH_URL}/${mediaId}?fields=shortcode,media_type&access_token=${accessToken}`,
+      );
+      if (mediaInfoResponse.ok) {
+        const mediaInfo: InstagramMediaInfo = await mediaInfoResponse.json();
+        return {
+          id: mediaId,
+          shortcode: mediaInfo.shortcode,
+          media_type: mediaInfo.media_type,
+        };
+      }
+    } catch (error) {
+      console.warn(`[Instagram] Failed to fetch shortcode for carousel ${mediaId}:`, error);
+    }
+
+    return publishResult;
   }
 }
 

@@ -17,6 +17,7 @@ import {
   Twitter,
   Video,
   ExternalLink,
+  Image as ImageIcon,
 } from "lucide-react";
 import axios from "axios";
 
@@ -29,11 +30,15 @@ type PostStatus = "DRAFT" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED";
 interface Post {
   id: string;
   content: string;
+  mediaUrls?: string;
+  mediaType?: "IMAGE" | "VIDEO" | "CAROUSEL";
   status: PostStatus;
   platform: Platform;
   scheduledAt: string | null;
   publishedAt: string | null;
   platformPostId: string | null;
+  metadata?: any;
+  postFormat?: "POST" | "REEL" | "SHORT" | "STORY";
   createdAt: string;
   profile: {
     id: string;
@@ -59,14 +64,25 @@ const PLATFORM_INFO: Record<Platform, { name: string; icon: React.ComponentType<
 };
 
 // Generate social media post URL
-function getPostUrl(platform: Platform, platformPostId: string, username?: string): string {
+function getPostUrl(
+  platform: Platform,
+  platformPostId: string,
+  username?: string,
+  metadata?: any,
+  postFormat?: "POST" | "REEL" | "SHORT" | "STORY",
+): string {
   switch (platform) {
     case "FACEBOOK":
       // Facebook post URL format: https://www.facebook.com/{page-id}/posts/{post-id}
       return `https://www.facebook.com/${platformPostId}`;
     case "INSTAGRAM":
-      // Instagram post URL format: https://www.instagram.com/p/{post-id}/
-      return `https://www.instagram.com/p/${platformPostId}/`;
+      // Use shortcode from metadata if available, otherwise use platformPostId
+      const shortcode = metadata?.shortcode || platformPostId;
+      // Check if it's a Reel based on postFormat or media_type
+      const isReel = postFormat === "REEL" || metadata?.media_type === "REELS";
+      return isReel
+        ? `https://www.instagram.com/reel/${shortcode}/`
+        : `https://www.instagram.com/p/${shortcode}/`;
     case "TWITTER":
       // Twitter post URL format: https://twitter.com/{username}/status/{tweet-id}
       return username 
@@ -234,6 +250,9 @@ export default function PostsPage() {
           {filteredPosts.map((post) => {
             const StatusIcon = STATUS_INFO[post.status].icon;
             const PlatformIcon = PLATFORM_INFO[post.platform].icon;
+            const mediaUrls = post.mediaUrls ? post.mediaUrls.split(",").filter(Boolean) : [];
+            const firstMediaUrl = mediaUrls[0];
+            const isVideo = post.mediaType === "VIDEO" || (firstMediaUrl && firstMediaUrl.includes("video"));
 
             return (
               <div
@@ -295,7 +314,9 @@ export default function PostsPage() {
                                 const url = getPostUrl(
                                   post.platform,
                                   post.platformPostId!,
-                                  post.profile.platformUsername || undefined
+                                  post.profile.platformUsername || undefined,
+                                  post.metadata,
+                                  post.postFormat
                                 );
                                 window.open(url, "_blank", "noopener,noreferrer");
                               }}
@@ -316,6 +337,47 @@ export default function PostsPage() {
                     </div>
                   </div>
 
+                  {/* Thumbnail */}
+                  {firstMediaUrl && (
+                    <div className="flex-shrink-0">
+                      <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
+                        {isVideo ? (
+                          <>
+                            <video
+                              src={firstMediaUrl}
+                              className="h-full w-full object-cover"
+                              muted
+                              playsInline
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                              <Video className="h-6 w-6 text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          <img
+                            src={firstMediaUrl}
+                            alt="Post thumbnail"
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              // Fallback to icon if image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = "none";
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = `<div class="flex h-full w-full items-center justify-center"><svg class="h-6 w-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>`;
+                              }
+                            }}
+                          />
+                        )}
+                        {post.mediaType === "CAROUSEL" && mediaUrls.length > 1 && (
+                          <div className="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-xs text-white">
+                            +{mediaUrls.length - 1}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex flex-shrink-0 items-center gap-2">
                     {post.status === "PUBLISHED" && post.platformPostId && (
@@ -326,7 +388,9 @@ export default function PostsPage() {
                           const url = getPostUrl(
                             post.platform,
                             post.platformPostId!,
-                            post.profile.platformUsername || undefined
+                            post.profile.platformUsername || undefined,
+                            post.metadata,
+                            post.postFormat
                           );
                           window.open(url, "_blank", "noopener,noreferrer");
                         }}
@@ -343,14 +407,16 @@ export default function PostsPage() {
                     >
                       <FileText className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/posts/${post.id}/edit`)}
-                      title="Edit post"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    {post.status !== "PUBLISHED" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/posts/${post.id}/edit`)}
+                        title="Edit post"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

@@ -32,6 +32,7 @@ interface Post {
   content: string;
   mediaUrls: string;
   mediaType: "IMAGE" | "VIDEO" | "CAROUSEL";
+  postFormat?: "POST" | "REEL" | "SHORT" | "STORY";
   status: PostStatus;
   platform: Platform;
   scheduledAt: string | null;
@@ -39,6 +40,7 @@ interface Post {
   failedAt: string | null;
   errorMessage: string | null;
   platformPostId: string | null;
+  metadata?: any;
   createdAt: string;
   updatedAt: string;
   profile: {
@@ -65,12 +67,24 @@ const PLATFORM_INFO: Record<Platform, { name: string; icon: React.ComponentType<
 };
 
 // Generate social media post URL
-function getPostUrl(platform: Platform, platformPostId: string, username?: string): string {
+function getPostUrl(
+  platform: Platform,
+  platformPostId: string,
+  username?: string,
+  metadata?: any,
+  postFormat?: "POST" | "REEL" | "SHORT" | "STORY",
+): string {
   switch (platform) {
     case "FACEBOOK":
       return `https://www.facebook.com/${platformPostId}`;
     case "INSTAGRAM":
-      return `https://www.instagram.com/p/${platformPostId}/`;
+      // Use shortcode from metadata if available, otherwise use platformPostId
+      const shortcode = metadata?.shortcode || platformPostId;
+      // Check if it's a Reel based on postFormat or media_type
+      const isReel = postFormat === "REEL" || metadata?.media_type === "REELS";
+      return isReel
+        ? `https://www.instagram.com/reel/${shortcode}/`
+        : `https://www.instagram.com/p/${shortcode}/`;
     case "TWITTER":
       return username 
         ? `https://twitter.com/${username}/status/${platformPostId}`
@@ -191,7 +205,9 @@ export default function PostDetailPage() {
                 const url = getPostUrl(
                   post.platform,
                   post.platformPostId!,
-                  post.profile.platformUsername || undefined
+                  post.profile.platformUsername || undefined,
+                  post.metadata,
+                  post.postFormat
                 );
                 window.open(url, "_blank", "noopener,noreferrer");
               }}
@@ -200,13 +216,15 @@ export default function PostDetailPage() {
               View on {PLATFORM_INFO[post.platform].name}
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/posts/${post.id}/edit`)}
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
+          {post.status !== "PUBLISHED" && (
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/posts/${post.id}/edit`)}
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setDeleteDialogOpen(true)}
