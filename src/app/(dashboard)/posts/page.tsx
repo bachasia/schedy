@@ -41,6 +41,7 @@ interface Post {
   platformPostId: string | null;
   metadata?: any;
   postFormat?: "POST" | "REEL" | "SHORT" | "STORY";
+  groupId?: string | null;
   createdAt: string;
   profile: {
     id: string;
@@ -133,15 +134,21 @@ export default function PostsPage() {
   const [platformFilter, setPlatformFilter] = useState<Platform | "ALL">("ALL");
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
 
-  // Group posts by content, mediaUrls, and createdAt (within 5 seconds)
+  // Group posts by groupId (or fallback to content+time for old posts without groupId)
   const groupedPosts = useMemo(() => {
     const groups = new Map<string, Post[]>();
     
     posts.forEach((post) => {
-      // Create a key from content, mediaUrls, and createdAt (rounded to nearest 5 seconds)
-      const createdAt = new Date(post.createdAt).getTime();
-      const roundedTime = Math.floor(createdAt / 5000) * 5000; // Round to nearest 5 seconds
-      const key = `${post.content}|${post.mediaUrls || ""}|${roundedTime}`;
+      // Use groupId if available, otherwise fallback to content+time matching for backward compatibility
+      let key: string;
+      if (post.groupId) {
+        key = post.groupId;
+      } else {
+        // Fallback for old posts without groupId
+        const createdAt = new Date(post.createdAt).getTime();
+        const roundedTime = Math.floor(createdAt / 5000) * 5000; // Round to nearest 5 seconds
+        key = `legacy_${post.content}|${post.mediaUrls || ""}|${roundedTime}`;
+      }
       
       if (!groups.has(key)) {
         groups.set(key, []);
@@ -168,7 +175,7 @@ export default function PostsPage() {
       }));
       
       grouped.push({
-        id: firstPost.id, // Use first post's ID as group ID
+        id: firstPost.groupId || firstPost.id, // Use groupId if available, otherwise use first post's ID
         content: firstPost.content,
         mediaUrls: firstPost.mediaUrls || "",
         mediaType: firstPost.mediaType,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma, Platform, PostStatus } from "@prisma/client";
+import { randomUUID } from "crypto";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -104,6 +105,9 @@ export async function POST(request: Request) {
 
     console.log("[API] POST /api/posts - Found", profiles.length, "profiles, creating posts...");
 
+    // Generate a groupId for all posts created in this action
+    const groupId = randomUUID();
+
     // Create a post for each profile
     const posts = await Promise.all(
     profileIds.map((profileId) => {
@@ -119,6 +123,7 @@ export async function POST(request: Request) {
         postFormat: (postFormat || "POST") as "POST" | "REEL" | "SHORT" | "STORY",
         status: status as PostStatus,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        groupId: groupId, // Assign same groupId to all posts in this batch
       };
 
       // Only set mediaType if there are media URLs
