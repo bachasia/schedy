@@ -134,6 +134,13 @@ export default function NewPostPage() {
   const characterCount = content.length;
   const isOverLimit = characterCount > characterLimit;
 
+  // Check if Instagram or TikTok requires media
+  const hasInstagramOrTikTok = selectedProfiles.some(
+    (p) => p.platform === "INSTAGRAM" || p.platform === "TIKTOK"
+  );
+  const hasMedia = mediaFiles.length > 0 && mediaFiles.some((f) => f.url);
+  const mediaRequiredError = hasInstagramOrTikTok && !hasMedia;
+
   const handleProfileToggle = (profileId: string) => {
     const current = selectedProfileIds;
     if (current.includes(profileId)) {
@@ -149,6 +156,18 @@ export default function NewPostPage() {
   const onSaveDraft = async (data: PostFormValues) => {
     setIsSaving(true);
     try {
+      // Check if Instagram or TikTok requires media
+      const hasInstagramOrTikTok = selectedProfiles.some(
+        (p) => p.platform === "INSTAGRAM" || p.platform === "TIKTOK"
+      );
+      const hasMedia = mediaFiles.length > 0 && mediaFiles.some((f) => f.url);
+      
+      if (hasInstagramOrTikTok && !hasMedia) {
+        alert("Instagram and TikTok posts require at least one media file. Please upload an image or video.");
+        setIsSaving(false);
+        return;
+      }
+
       // Check if any media is still uploading
       const uploadingFiles = mediaFiles.filter((f) => f.uploading);
       if (uploadingFiles.length > 0) {
@@ -360,7 +379,12 @@ export default function NewPostPage() {
             <ImageIcon className="h-4 w-4" />
             <span className="hidden sm:inline">Media</span>
           </TabsTrigger>
-          <TabsTrigger value="schedule" className="flex items-center gap-2" disabled={!content.trim() || selectedProfileIds.length === 0}>
+          <TabsTrigger 
+            value="schedule" 
+            className="flex items-center gap-2" 
+            disabled={!content.trim() || selectedProfileIds.length === 0 || mediaRequiredError}
+            title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
+          >
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Schedule</span>
           </TabsTrigger>
@@ -563,7 +587,8 @@ export default function NewPostPage() {
                 <Button
                   variant="outline"
                   onClick={handleSubmit(onSaveDraft)}
-                  disabled={isSaving || !content.trim()}
+                  disabled={isSaving || !content.trim() || mediaRequiredError}
+                  title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
                 >
                   <Save className="mr-2 h-4 w-4" />
                   Save as Draft
@@ -606,6 +631,17 @@ export default function NewPostPage() {
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
                 Upload images or videos to accompany your post.
               </p>
+              {mediaRequiredError && (
+                <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Media Required</p>
+                    <p className="mt-1">
+                      Instagram and TikTok posts require at least one media file (image or video). Please upload media before saving or scheduling.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <MediaUpload
@@ -622,7 +658,8 @@ export default function NewPostPage() {
               </Button>
               <Button
                 onClick={() => setActiveTab("schedule")}
-                disabled={mediaFiles.some(f => f.uploading)}
+                disabled={mediaFiles.some(f => f.uploading) || mediaRequiredError}
+                title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
               >
                 Continue to Schedule
                 <ArrowRight className="ml-2 h-4 w-4" />
