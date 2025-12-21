@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Cloudflare R2 Storage Integration
  * R2 is S3-compatible, so we use AWS SDK
  */
@@ -61,9 +61,24 @@ export async function uploadToR2(
     });
 
     await client.send(command);
+    console.log(`[R2] Successfully uploaded file to bucket: ${bucketName}, key: ${key}`);
 
+    // Ensure publicUrl doesn't have trailing slash
+    const baseUrl = publicUrl.endsWith("/") ? publicUrl.slice(0, -1) : publicUrl;
+    // Ensure key doesn't have leading slash
+    const cleanKey = key.startsWith("/") ? key.slice(1) : key;
+    
     // Return public URL
-    return `${publicUrl}/${key}`;
+    const finalUrl = `${baseUrl}/${cleanKey}`;
+    console.log(`[R2] Generated public URL: ${finalUrl}`);
+    console.log(`[R2] R2_PUBLIC_URL config: ${publicUrl}`);
+    
+    // Verify URL format
+    if (finalUrl.includes(".r2.cloudflarestorage.com") && !finalUrl.includes("pub-")) {
+      console.warn(`[R2] WARNING: URL appears to use R2 endpoint directly. Make sure R2_PUBLIC_URL is set to a custom domain or R2 public URL (pub-*.r2.dev)`);
+    }
+    
+    return finalUrl;
   } catch (error) {
     console.error("[R2] Upload error:", error);
     throw new Error(`Failed to upload file to R2: ${error instanceof Error ? error.message : "Unknown error"}`);

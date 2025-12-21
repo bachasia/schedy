@@ -79,7 +79,15 @@ R2_ACCESS_KEY_ID="your-r2-access-key-id"
 R2_SECRET_ACCESS_KEY="your-r2-secret-access-key"
 R2_BUCKET_NAME="your-bucket-name"
 # Public URL for accessing uploaded files
-# Format: https://[your-domain]/uploads or https://[account-id].r2.cloudflarestorage.com/[bucket]
+# IMPORTANT: R2 bucket must be configured with public access!
+# Option 1: Custom domain (recommended)
+#   - Set up custom domain in R2 > Settings > Public Access
+#   - Example: R2_PUBLIC_URL="https://cdn.yourdomain.com"
+# Option 2: R2 Public URL (if bucket has public access)
+#   - Enable public access in R2 > Settings > Public Access
+#   - Get public URL from R2 dashboard (format: https://pub-xxxxx.r2.dev)
+#   - Example: R2_PUBLIC_URL="https://pub-xxxxx.r2.dev"
+# DO NOT use: https://[account-id].r2.cloudflarestorage.com (this is NOT public)
 R2_PUBLIC_URL="https://your-domain.com"
 
 
