@@ -319,8 +319,9 @@ export function validateTikTokVideo(
 /**
  * Initialize video upload and get upload URL
  * @param accessToken - User's access token
+ * @param videoSize - Size of video file in bytes
  */
-async function initializeVideoUpload(accessToken: string): Promise<TikTokVideoUploadResponse["data"]> {
+async function initializeVideoUpload(accessToken: string, videoSize: number): Promise<TikTokVideoUploadResponse["data"]> {
   const response = await fetch(`${TIKTOK_API_URL}/post/publish/inbox/video/init/`, {
     method: "POST",
     headers: {
@@ -330,19 +331,30 @@ async function initializeVideoUpload(accessToken: string): Promise<TikTokVideoUp
     body: JSON.stringify({
       source_info: {
         source: "FILE_UPLOAD",
-        video_size: 0, // Will be updated during actual upload
+        video_size: videoSize,
       },
     }),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to initialize TikTok video upload: ${response.statusText}`);
+    const errorText = await response.text();
+    let errorMessage = `Failed to initialize TikTok video upload: ${response.status} ${response.statusText}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.error?.message || errorJson.error?.code || errorMessage;
+      console.error("[TikTok] Upload init error response:", JSON.stringify(errorJson, null, 2));
+    } catch {
+      console.error("[TikTok] Upload init error response (raw):", errorText);
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 
   const data: TikTokVideoUploadResponse = await response.json();
 
   if (data.error) {
-    throw new Error(`TikTok upload init error: ${data.error.message}`);
+    console.error("[TikTok] Upload init API error:", JSON.stringify(data.error, null, 2));
+    throw new Error(`TikTok upload init error: ${data.error.message || data.error.code || JSON.stringify(data.error)}`);
   }
 
   return data.data;
@@ -407,30 +419,70 @@ export async function publishToTikTok(
   }
 
   try {
-    // Note: In production, you would fetch the actual video file
-    // For now, this is a placeholder implementation
     console.log(`[TikTok] Video URL: ${videoUrl}`);
 
-    // Validate video (in production, check actual file)
-    const validation = validateTikTokVideo(videoUrl, 0);
+    // Step 1: Fetch video to get size and validate
+    console.log(`[TikTok] Fetching video to get size...`);
+    const videoResponse = await fetch(videoUrl, { method: "HEAD" });
+    
+    if (!videoResponse.ok) {
+      throw new Error(`Failed to fetch video: ${videoResponse.status} ${videoResponse.statusText}`);
+    }
+
+    const contentLength = videoResponse.headers.get("content-length");
+    let videoSize = contentLength ? parseInt(contentLength, 10) : 0;
+
+    if (videoSize === 0) {
+      // If HEAD doesn't return size, try GET with range
+      const rangeResponse = await fetch(videoUrl, {
+        method: "GET",
+        headers: { Range: "bytes=0-0" },
+      });
+      const actualSize = rangeResponse.headers.get("content-range");
+      if (actualSize) {
+        const match = actualSize.match(/\/(\d+)$/);
+        if (match) {
+          videoSize = parseInt(match[1], 10);
+        }
+      }
+    }
+
+    if (videoSize === 0) {
+      throw new Error("Could not determine video size. Please ensure the video URL is accessible.");
+    }
+
+    console.log(`[TikTok] Video size: ${videoSize} bytes (${(videoSize / (1024 * 1024)).toFixed(2)} MB)`);
+
+    // Validate video
+    const validation = validateTikTokVideo(videoUrl, videoSize);
     if (!validation.valid) {
       throw new Error(validation.error);
     }
 
-    // Step 1: Initialize upload
+    // Step 2: Initialize upload with actual video size
     console.log(`[TikTok] Initializing video upload...`);
-    const uploadData = await initializeVideoUpload(profile.accessToken);
+    const uploadData = await initializeVideoUpload(profile.accessToken, videoSize);
     const { publish_id, upload_url } = uploadData;
 
-    // Step 2: Upload video (placeholder - in production, fetch and upload actual video)
+    console.log(`[TikTok] Upload URL received: ${upload_url}`);
+    console.log(`[TikTok] Publish ID: ${publish_id}`);
+
+    // Step 3: Fetch video buffer and upload chunks
+    console.log(`[TikTok] Fetching video buffer...`);
+    const videoBufferResponse = await fetch(videoUrl);
+    if (!videoBufferResponse.ok) {
+      throw new Error(`Failed to fetch video buffer: ${videoBufferResponse.status} ${videoBufferResponse.statusText}`);
+    }
+    const videoArrayBuffer = await videoBufferResponse.arrayBuffer();
+    const videoBuffer = Buffer.from(videoArrayBuffer);
+
     console.log(`[TikTok] Uploading video chunks to: ${upload_url}`);
-    // const videoBuffer = await fetchVideoBuffer(videoUrl);
-    // await uploadVideoChunks(upload_url, videoBuffer);
+    await uploadVideoChunks(upload_url, videoBuffer);
     console.log(`[TikTok] Video upload completed`);
 
-    // Step 3: Publish video with caption
+    // Step 4: Publish video with caption
     console.log(`[TikTok] Publishing video with caption...`);
-    const publishResponse = await fetch(`${TIKTOK_API_URL}/post/publish/video/init/`, {
+    const publishResponse = await fetch(`${TIKTOK_API_URL}/post/publish/video/publish/`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${profile.accessToken}`,
@@ -439,27 +491,35 @@ export async function publishToTikTok(
       body: JSON.stringify({
         post_info: {
           title: caption,
-          privacy_level: "SELF_ONLY", // Options: PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, SELF_ONLY
+          privacy_level: "PUBLIC_TO_EVERYONE", // Options: PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, SELF_ONLY
           disable_duet: false,
           disable_comment: false,
           disable_stitch: false,
           video_cover_timestamp_ms: 1000,
         },
-        source_info: {
-          source: "FILE_UPLOAD",
-          video_url: upload_url,
-        },
+        publish_id: publish_id,
       }),
     });
 
     if (!publishResponse.ok) {
-      throw new Error(`Failed to publish TikTok video: ${publishResponse.statusText}`);
+      const errorText = await publishResponse.text();
+      let errorMessage = `Failed to publish TikTok video: ${publishResponse.status} ${publishResponse.statusText}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.error?.message || errorJson.error?.code || errorMessage;
+        console.error("[TikTok] Publish error response:", JSON.stringify(errorJson, null, 2));
+      } catch {
+        console.error("[TikTok] Publish error response (raw):", errorText);
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
     const publishData: TikTokPublishResponse = await publishResponse.json();
 
     if (publishData.error) {
-      throw new Error(`TikTok publish error: ${publishData.error.message}`);
+      console.error("[TikTok] Publish API error:", JSON.stringify(publishData.error, null, 2));
+      throw new Error(`TikTok publish error: ${publishData.error.message || publishData.error.code || JSON.stringify(publishData.error)}`);
     }
 
     console.log(`[TikTok] Successfully published video. Publish ID: ${publishData.data.publish_id}`);
