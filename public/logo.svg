@@ -1,0 +1,13 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" rx="20" fill="url(#gradient)"/>
+  <path d="M50 62.5C50 61.1193 51.1193 60 52.5 60H147.5C148.881 60 150 61.1193 150 62.5V137.5C150 138.881 148.881 140 147.5 140H52.5C51.1193 140 50 138.881 50 137.5V62.5Z" fill="white" opacity="0.9"/>
+  <path d="M62.5 81.25H137.5M62.5 106.25H137.5M62.5 131.25H112.5" stroke="url(#gradient)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="125" cy="125" r="6.25" fill="url(#gradient)"/>
+  <text x="100" y="170" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle" opacity="0.95">Schedy</text>
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+</svg>
