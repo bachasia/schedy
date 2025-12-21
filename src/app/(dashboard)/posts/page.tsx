@@ -36,6 +36,8 @@ interface Post {
   platform: Platform;
   scheduledAt: string | null;
   publishedAt: string | null;
+  failedAt: string | null;
+  errorMessage: string | null;
   platformPostId: string | null;
   metadata?: any;
   postFormat?: "POST" | "REEL" | "SHORT" | "STORY";
@@ -46,6 +48,31 @@ interface Post {
     platform: Platform;
     platformUsername: string | null;
   };
+}
+
+interface GroupedPost {
+  id: string; // Use first post's ID or generate a group ID
+  content: string;
+  mediaUrls: string;
+  mediaType: "IMAGE" | "VIDEO" | "CAROUSEL" | undefined;
+  postFormat: "POST" | "REEL" | "SHORT" | "STORY" | undefined;
+  createdAt: string;
+  scheduledAt: string | null;
+  platforms: Array<{
+    platform: Platform;
+    postId: string;
+    status: PostStatus;
+    platformPostId: string | null;
+    metadata: any;
+    profile: {
+      id: string;
+      name: string | null;
+      platformUsername: string | null;
+    };
+    publishedAt: string | null;
+    failedAt: string | null;
+    errorMessage: string | null;
+  }>;
 }
 
 const STATUS_INFO: Record<PostStatus, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
@@ -106,13 +133,75 @@ export default function PostsPage() {
   const [platformFilter, setPlatformFilter] = useState<Platform | "ALL">("ALL");
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
 
+  // Group posts by content, mediaUrls, and createdAt (within 5 seconds)
+  const groupedPosts = useMemo(() => {
+    const groups = new Map<string, Post[]>();
+    
+    posts.forEach((post) => {
+      // Create a key from content, mediaUrls, and createdAt (rounded to nearest 5 seconds)
+      const createdAt = new Date(post.createdAt).getTime();
+      const roundedTime = Math.floor(createdAt / 5000) * 5000; // Round to nearest 5 seconds
+      const key = `${post.content}|${post.mediaUrls || ""}|${roundedTime}`;
+      
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(post);
+    });
+    
+    // Convert to GroupedPost format
+    const grouped: GroupedPost[] = [];
+    groups.forEach((postGroup) => {
+      if (postGroup.length === 0) return;
+      
+      const firstPost = postGroup[0];
+      const platforms = postGroup.map((post) => ({
+        platform: post.platform,
+        postId: post.id,
+        status: post.status,
+        platformPostId: post.platformPostId,
+        metadata: post.metadata,
+        profile: post.profile,
+        publishedAt: post.publishedAt,
+        failedAt: post.failedAt,
+        errorMessage: post.errorMessage,
+      }));
+      
+      grouped.push({
+        id: firstPost.id, // Use first post's ID as group ID
+        content: firstPost.content,
+        mediaUrls: firstPost.mediaUrls || "",
+        mediaType: firstPost.mediaType,
+        postFormat: firstPost.postFormat,
+        createdAt: firstPost.createdAt,
+        scheduledAt: firstPost.scheduledAt,
+        platforms,
+      });
+    });
+    
+    // Sort by createdAt descending
+    return grouped.sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [posts]);
+
   const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
-      if (statusFilter !== "ALL" && post.status !== statusFilter) return false;
-      if (platformFilter !== "ALL" && post.platform !== platformFilter) return false;
+    return groupedPosts.filter((group) => {
+      // Filter by platform if specified
+      if (platformFilter !== "ALL") {
+        const hasPlatform = group.platforms.some((p) => p.platform === platformFilter);
+        if (!hasPlatform) return false;
+      }
+      
+      // Filter by status if specified
+      if (statusFilter !== "ALL") {
+        const hasStatus = group.platforms.some((p) => p.status === statusFilter);
+        if (!hasStatus) return false;
+      }
+      
       return true;
     });
-  }, [posts, statusFilter, platformFilter]);
+  }, [groupedPosts, statusFilter, platformFilter]);
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -133,10 +222,24 @@ export default function PostsPage() {
   const handleDelete = async (id: string) => {
     try {
       await axios.delete(`/api/posts/${id}`);
-      setPosts(posts.filter((p) => p.id !== id));
+      await fetchPosts(); // Refresh posts list
       setDeleteDialogId(null);
     } catch (error) {
       console.error("Failed to delete post:", error);
+    }
+  };
+  
+  const handleDeleteGroup = async (group: GroupedPost) => {
+    if (!confirm(`Delete this post from all ${group.platforms.length} platform(s)?`)) {
+      return;
+    }
+    
+    try {
+      await Promise.all(group.platforms.map((p) => axios.delete(`/api/posts/${p.postId}`)));
+      await fetchPosts(); // Refresh posts list
+    } catch (error) {
+      console.error("Failed to delete posts:", error);
+      alert("Failed to delete some posts. Please try again.");
     }
   };
 
@@ -247,100 +350,33 @@ export default function PostsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredPosts.map((post) => {
-            const StatusIcon = STATUS_INFO[post.status].icon;
-            const PlatformIcon = PLATFORM_INFO[post.platform].icon;
-            const mediaUrls = post.mediaUrls ? post.mediaUrls.split(",").filter(Boolean) : [];
+          {filteredPosts.map((group) => {
+            const mediaUrls = group.mediaUrls ? group.mediaUrls.split(",").filter(Boolean) : [];
             const firstMediaUrl = mediaUrls[0];
-            const isVideo = post.mediaType === "VIDEO" || (firstMediaUrl && firstMediaUrl.includes("video"));
+            const isVideo = group.mediaType === "VIDEO" || (firstMediaUrl && firstMediaUrl.includes("video"));
+            
+            // Get overall status (show most important: FAILED > PUBLISHING > PUBLISHED > SCHEDULED > DRAFT)
+            const getOverallStatus = (): PostStatus => {
+              if (group.platforms.some((p) => p.status === "FAILED")) return "FAILED";
+              if (group.platforms.some((p) => p.status === "PUBLISHING")) return "PUBLISHING";
+              if (group.platforms.some((p) => p.status === "PUBLISHED")) return "PUBLISHED";
+              if (group.platforms.some((p) => p.status === "SCHEDULED")) return "SCHEDULED";
+              return "DRAFT";
+            };
+            
+            const overallStatus = getOverallStatus();
+            const StatusIcon = STATUS_INFO[overallStatus].icon;
 
             return (
               <div
-                key={post.id}
+                key={group.id}
                 className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
               >
                 <div className="flex items-start gap-4">
-                  {/* Platform Icon */}
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                    <PlatformIcon className={cn("h-5 w-5", PLATFORM_INFO[post.platform].color)} />
-                  </div>
-
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    {/* Status & Platform */}
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
-                          STATUS_INFO[post.status].color,
-                        )}
-                      >
-                        <StatusIcon className="h-3 w-3" />
-                        {STATUS_INFO[post.status].label}
-                      </span>
-                      <span className="text-xs text-zinc-500">
-                        {PLATFORM_INFO[post.platform].name}
-                      </span>
-                      {post.profile.platformUsername && (
-                        <span className="text-xs text-zinc-500">
-                          @{post.profile.platformUsername}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Content Preview */}
-                    <p className="mb-2 line-clamp-2 text-sm text-zinc-700 dark:text-zinc-300">
-                      {post.content}
-                    </p>
-
-                    {/* Meta Info */}
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-                      {post.scheduledAt && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(post.scheduledAt).toLocaleString(undefined, {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}
-                        </span>
-                      )}
-                      {post.publishedAt && (
-                        <span className="flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Published {new Date(post.publishedAt).toLocaleDateString()}
-                          {post.platformPostId && (
-                            <button
-                              onClick={() => {
-                                const url = getPostUrl(
-                                  post.platform,
-                                  post.platformPostId!,
-                                  post.profile.platformUsername || undefined,
-                                  post.metadata,
-                                  post.postFormat
-                                );
-                                window.open(url, "_blank", "noopener,noreferrer");
-                              }}
-                              className="ml-1 inline-flex items-center gap-0.5 text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400"
-                            >
-                              View
-                              <ExternalLink className="h-2.5 w-2.5" />
-                            </button>
-                          )}
-                        </span>
-                      )}
-                      {!post.scheduledAt && !post.publishedAt && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Created {new Date(post.createdAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Thumbnail */}
-                  {firstMediaUrl && (
+                  {firstMediaUrl ? (
                     <div className="flex-shrink-0">
-                      <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
+                      <div className="relative h-24 w-24 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
                         {isVideo ? (
                           <>
                             <video
@@ -359,7 +395,6 @@ export default function PostsPage() {
                             alt="Post thumbnail"
                             className="h-full w-full object-cover"
                             onError={(e) => {
-                              // Fallback to icon if image fails to load
                               const target = e.target as HTMLImageElement;
                               target.style.display = "none";
                               const parent = target.parentElement;
@@ -369,49 +404,151 @@ export default function PostsPage() {
                             }}
                           />
                         )}
-                        {post.mediaType === "CAROUSEL" && mediaUrls.length > 1 && (
+                        {group.mediaType === "CAROUSEL" && mediaUrls.length > 1 && (
                           <div className="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-xs text-white">
                             +{mediaUrls.length - 1}
                           </div>
                         )}
                       </div>
                     </div>
+                  ) : (
+                    <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900">
+                      <FileText className="h-8 w-8 text-zinc-400" />
+                    </div>
                   )}
+
+                  {/* Content */}
+                  <div className="min-w-0 flex-1">
+                    {/* Status & Platform Icons */}
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
+                          STATUS_INFO[overallStatus].color,
+                        )}
+                      >
+                        <StatusIcon className="h-3 w-3" />
+                        {STATUS_INFO[overallStatus].label}
+                      </span>
+                      
+                      {/* Platform Icons with Status Badges */}
+                      <div className="flex items-center gap-1.5">
+                        {group.platforms.map((platform) => {
+                          const PlatformIcon = PLATFORM_INFO[platform.platform].icon;
+                          const isPublished = platform.status === "PUBLISHED" && platform.platformPostId;
+                          const isFailed = platform.status === "FAILED";
+                          const isPublishing = platform.status === "PUBLISHING";
+                          const isScheduled = platform.status === "SCHEDULED";
+                          const isPending = isPublishing || isScheduled;
+                          
+                          return (
+                            <button
+                              key={platform.postId}
+                              onClick={() => {
+                                if (isPublished) {
+                                  const url = getPostUrl(
+                                    platform.platform,
+                                    platform.platformPostId!,
+                                    platform.profile.platformUsername || undefined,
+                                    platform.metadata,
+                                    group.postFormat
+                                  );
+                                  window.open(url, "_blank", "noopener,noreferrer");
+                                } else {
+                                  router.push(`/posts/${platform.postId}`);
+                                }
+                              }}
+                              className={cn(
+                                "relative flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all hover:scale-110",
+                                isPublished
+                                  ? "border-green-500 bg-green-50 dark:bg-green-950/40"
+                                  : isFailed
+                                    ? "border-red-500 bg-red-50 dark:bg-red-950/40"
+                                    : isScheduled
+                                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40"
+                                      : isPublishing
+                                        ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/40"
+                                        : "border-zinc-300 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800",
+                                isPublished && "cursor-pointer hover:border-green-600",
+                                !isPublished && "cursor-pointer hover:border-zinc-400"
+                              )}
+                              title={`${PLATFORM_INFO[platform.platform].name}: ${STATUS_INFO[platform.status].label}${platform.errorMessage ? ` - ${platform.errorMessage}` : ""}${isScheduled && group.scheduledAt ? ` (${new Date(group.scheduledAt).toLocaleString()})` : ""}`}
+                            >
+                              <PlatformIcon className={cn("h-4 w-4", PLATFORM_INFO[platform.platform].color)} />
+                              
+                              {/* Status Badge */}
+                              {isPublished && (
+                                <div className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-green-500 ring-2 ring-white dark:ring-zinc-950">
+                                  <CheckCircle2 className="h-2.5 w-2.5 text-white" />
+                                </div>
+                              )}
+                              {isFailed && (
+                                <div className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 ring-2 ring-white dark:ring-zinc-950">
+                                  <XCircle className="h-2.5 w-2.5 text-white" />
+                                </div>
+                              )}
+                              {isScheduled && (
+                                <div className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-blue-500 ring-2 ring-white dark:ring-zinc-950">
+                                  <Calendar className="h-2 w-2 text-white" />
+                                </div>
+                              )}
+                              {isPublishing && (
+                                <div className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-yellow-500 ring-2 ring-white dark:ring-zinc-950">
+                                  <Clock className="h-2 w-2 text-white" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Content Preview */}
+                    <p className="mb-2 line-clamp-2 text-sm text-zinc-700 dark:text-zinc-300">
+                      {group.content}
+                    </p>
+
+                    {/* Meta Info */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+                      {group.scheduledAt && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(group.scheduledAt).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </span>
+                      )}
+                      {group.platforms.some((p) => p.publishedAt) && (
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Published {new Date(group.platforms.find((p) => p.publishedAt)!.publishedAt!).toLocaleDateString()}
+                        </span>
+                      )}
+                      {!group.scheduledAt && !group.platforms.some((p) => p.publishedAt) && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Created {new Date(group.createdAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Actions */}
                   <div className="flex flex-shrink-0 items-center gap-2">
-                    {post.status === "PUBLISHED" && post.platformPostId && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const url = getPostUrl(
-                            post.platform,
-                            post.platformPostId!,
-                            post.profile.platformUsername || undefined,
-                            post.metadata,
-                            post.postFormat
-                          );
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        }}
-                        title="View on social media"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/posts/${post.id}`)}
+                      onClick={() => router.push(`/posts/${group.platforms[0].postId}`)}
                       title="View post details"
                     >
                       <FileText className="h-4 w-4" />
                     </Button>
-                    {post.status !== "PUBLISHED" && (
+                    {overallStatus !== "PUBLISHED" && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => router.push(`/posts/${post.id}/edit`)}
+                        onClick={() => router.push(`/posts/${group.platforms[0].postId}/edit`)}
                         title="Edit post"
                       >
                         <Edit className="h-4 w-4" />
@@ -420,7 +557,7 @@ export default function PostsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setDeleteDialogId(post.id)}
+                      onClick={() => handleDeleteGroup(group)}
                       title="Delete post"
                     >
                       <Trash2 className="h-4 w-4" />
