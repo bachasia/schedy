@@ -242,10 +242,15 @@ export async function publishToFacebook(
   };
 
   // Handle media
+  console.log(`[Facebook API] Media URLs received:`, mediaUrls);
+  console.log(`[Facebook API] Media count:`, mediaUrls?.length || 0);
+  
   if (mediaUrls && mediaUrls.length > 0) {
+    console.log(`[Facebook API] Processing media post with ${mediaUrls.length} file(s)`);
     if (mediaUrls.length === 1) {
       // Single image or video
       const mediaUrl = mediaUrls[0];
+      console.log(`[Facebook API] Single media URL:`, mediaUrl);
       if (isVideo(mediaUrl)) {
         // Video post
         postData.file_url = mediaUrl;
@@ -323,6 +328,7 @@ export async function publishToFacebook(
     }
   } else {
     // Text-only post
+    console.log(`[Facebook API] Publishing text-only post to ${pageId}/feed`);
     const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/feed`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -331,10 +337,13 @@ export async function publishToFacebook(
 
     if (!response.ok) {
       const error = await response.json();
+      console.error(`[Facebook API] Text post publish failed:`, error);
       throw new Error(`Failed to publish post: ${error.error?.message || response.statusText}`);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log(`[Facebook API] Text post published successfully:`, result);
+    return result;
   }
 }
 
@@ -557,6 +566,8 @@ export function handleFacebookError(error: any): string {
 
   return error.message || "Unknown error occurred";
 }
+
+
 
 
 

@@ -19,3 +19,5 @@ export function getBaseUrl(request: NextRequest): string {
   }
   return url.origin;
 }
+
+

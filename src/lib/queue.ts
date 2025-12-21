@@ -293,9 +293,23 @@ async function publishToFacebook(
   mediaUrls: string,
 ): Promise<{ platformPostId: string; metadata?: any }> {
   console.log(`[Facebook] Publishing post ${postId} to profile ${profileId}`);
+  console.log(`[Facebook] Raw mediaUrls string:`, mediaUrls);
 
   // Parse media URLs (stored as comma-separated string in SQLite)
   const mediaArray = mediaUrls ? mediaUrls.split(",").filter(Boolean) : [];
+  console.log(`[Facebook] Parsed mediaArray:`, mediaArray);
+  console.log(`[Facebook] Media count:`, mediaArray.length);
+
+  if (mediaArray.length > 0) {
+    console.log(`[Facebook] First media URL:`, mediaArray[0]);
+    // Verify URL is accessible
+    try {
+      const testResponse = await fetch(mediaArray[0], { method: "HEAD" });
+      console.log(`[Facebook] Media URL accessibility check:`, testResponse.status, testResponse.statusText);
+    } catch (error) {
+      console.error(`[Facebook] Error checking media URL:`, error);
+    }
+  }
 
   // Call real Facebook API
   const result = await publishToFacebookAPI(profileId, content, mediaArray);

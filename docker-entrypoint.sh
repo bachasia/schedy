@@ -13,3 +13,5 @@ fi
 
 # If we're already nextjs user, just execute the command
 exec "$@"
+
+
