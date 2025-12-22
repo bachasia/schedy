@@ -68,8 +68,9 @@ interface TikTokVideoUploadResponse {
     upload_url?: string;
   };
   error?: {
-    code: string;
+    code: string; // "ok" means success, not an error!
     message: string;
+    log_id?: string;
   };
 }
 
@@ -373,16 +374,22 @@ async function initializeVideoUpload(
   console.log("[TikTok] Upload init API response:", JSON.stringify(data, null, 2));
 
   // ✅ FIX: TikTok returns code: "ok" for success, not an error!
-  // Check for error field first (some APIs use this format)
-  if (data.error) {
+  // TikTok API can return both data and error fields, but error.code === "ok" means success
+  // Check error.code first - only throw if error.code exists AND is NOT "ok"
+  if (data.error && data.error.code && data.error.code !== "ok") {
     console.error("[TikTok] Upload init API error:", JSON.stringify(data.error, null, 2));
     throw new Error(`TikTok upload init error: ${data.error.message || data.error.code || JSON.stringify(data.error)}`);
   }
 
-  // Check code field - "ok" means success, anything else is an error
+  // Check root-level code field - "ok" means success, anything else is an error
   if (data.code && data.code !== "ok") {
     console.error("[TikTok] Upload init API error (code field):", JSON.stringify(data, null, 2));
     throw new Error(`TikTok upload init failed: ${data.message || data.code} (log_id: ${data.log_id || "unknown"})`);
+  }
+
+  // If we reach here, either code is "ok" or not present - both are success cases
+  if (data.error?.code === "ok" || data.code === "ok" || (!data.error && !data.code)) {
+    console.log("[TikTok] Upload init successful - code is 'ok' or not present");
   }
 
   // If code is "ok" or not present, check if we have data
