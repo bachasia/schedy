@@ -117,7 +117,13 @@ socialPostsQueue.process(async (job) => {
     });
 
     if (!post) {
-      throw new Error(`Post ${postId} not found`);
+      // Post may have been deleted - mark job as completed to avoid retries
+      console.warn(`[Queue] Post ${postId} not found - may have been deleted. Skipping.`);
+      return { 
+        success: false, 
+        skipped: true, 
+        reason: "Post not found (may have been deleted)" 
+      };
     }
 
     // Verify ownership

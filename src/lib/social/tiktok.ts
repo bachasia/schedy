@@ -502,12 +502,13 @@ export async function publishToTikTok(
     // Step 2: Poll for upload status
     // TikTok needs time to fetch and process the video
     // Note: With PULL_FROM_URL, TikTok automatically fetches and publishes the video
+    // Since status endpoint may not be available, we'll try a few times then assume success
     let uploadComplete = false;
     let attempts = 0;
-    const maxAttempts = 60; // 5 minutes max (5 second intervals)
+    const maxAttempts = 10; // Reduced to 10 attempts (50 seconds max)
     const pollInterval = 5000; // 5 seconds
     let consecutiveErrors = 0;
-    const maxConsecutiveErrors = 10; // If status check fails 10 times in a row, assume success
+    const maxConsecutiveErrors = 5; // If status check fails 5 times in a row, assume success
 
     while (!uploadComplete && attempts < maxAttempts) {
       attempts++;
@@ -538,12 +539,12 @@ export async function publishToTikTok(
           // assume video is processing/published (PULL_FROM_URL auto-publishes)
           if (consecutiveErrors >= maxConsecutiveErrors) {
             console.log(
-              `[TikTok] Status check endpoint not available after ${consecutiveErrors} attempts. ` +
-              `Assuming video is processing (PULL_FROM_URL auto-publishes). ` +
-              `Video should be available on TikTok shortly.`
+              `[TikTok] Status check endpoint not available after ${consecutiveErrors} consecutive errors. ` +
+              `Assuming video is processing/published (PULL_FROM_URL auto-publishes). ` +
+              `Video should be available on TikTok shortly. Publish ID: ${publishId}`
             );
             uploadComplete = true;
-            break;
+            break; // Exit loop immediately
           }
           
           // Continue polling even if status check fails temporarily
@@ -589,12 +590,12 @@ export async function publishToTikTok(
           
           if (consecutiveErrors >= maxConsecutiveErrors) {
             console.log(
-              `[TikTok] Status check endpoint not available after ${consecutiveErrors} attempts. ` +
-              `Assuming video is processing (PULL_FROM_URL auto-publishes). ` +
-              `Video should be available on TikTok shortly.`
+              `[TikTok] Status check endpoint not available after ${consecutiveErrors} consecutive errors. ` +
+              `Assuming video is processing/published (PULL_FROM_URL auto-publishes). ` +
+              `Video should be available on TikTok shortly. Publish ID: ${publishId}`
             );
             uploadComplete = true;
-            break;
+            break; // Exit loop immediately
           }
           
           await new Promise((resolve) => setTimeout(resolve, pollInterval));
@@ -606,8 +607,21 @@ export async function publishToTikTok(
       }
     }
 
+    // If we exit loop without completing, check if we should assume success
+    if (!uploadComplete && consecutiveErrors >= maxConsecutiveErrors) {
+      console.log(
+        `[TikTok] Status check failed multiple times. Assuming video is published. ` +
+        `Publish ID: ${publishId}`
+      );
+      uploadComplete = true;
+    }
+
     if (!uploadComplete) {
-      throw new Error("TikTok video upload timed out. Please try again.");
+      // Only throw timeout if we didn't have consecutive errors (endpoint might be working but slow)
+      throw new Error(
+        `TikTok video upload status check timed out after ${maxAttempts} attempts. ` +
+        `Video may still be processing. Publish ID: ${publishId}`
+      );
     }
 
     console.log(`[TikTok] Successfully published video. Publish ID: ${publishId}`);
