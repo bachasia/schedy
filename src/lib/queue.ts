@@ -132,7 +132,20 @@ socialPostsQueue.process(async (job) => {
     }
 
     // Check if post is in correct status for publishing
-    if (post.status !== PostStatus.SCHEDULED && post.status !== PostStatus.PUBLISHED) {
+    // If status is PUBLISHING, it might be from a previous failed attempt - reset to SCHEDULED
+    if (post.status === PostStatus.PUBLISHING) {
+      console.log(
+        `[Queue] Post ${postId} is in PUBLISHING status (likely from previous attempt), resetting to SCHEDULED`
+      );
+      await prisma.post.update({
+        where: { id: postId },
+        data: {
+          status: PostStatus.SCHEDULED,
+          updatedAt: new Date(),
+        },
+      });
+      // Continue processing
+    } else if (post.status !== PostStatus.SCHEDULED && post.status !== PostStatus.PUBLISHED) {
       console.log(
         `[Queue] Post ${postId} cannot be published (status: ${post.status}), skipping`,
       );
@@ -205,12 +218,20 @@ socialPostsQueue.process(async (job) => {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
 
-    const isLastAttempt = attemptNumber >= maxAttempts;
+    // Check if error is non-retryable (e.g., spam_risk, invalid token)
+    const isNonRetryable = (error as any)?.isNonRetryable === true;
+    const isLastAttempt = attemptNumber >= maxAttempts || isNonRetryable;
     
     console.error(
       `[Queue] Failed to publish post ${postId} (attempt ${attemptNumber}/${maxAttempts}):`,
       errorMessage
     );
+
+    if (isNonRetryable) {
+      console.error(
+        `[Queue] Non-retryable error for post ${postId}: ${errorMessage}. Marking as FAILED immediately.`
+      );
+    }
 
     if (isLastAttempt) {
       // Final failure - update post status
@@ -221,12 +242,14 @@ socialPostsQueue.process(async (job) => {
         data: {
           status: PostStatus.FAILED,
           failedAt: new Date(),
-          errorMessage: `${errorMessage} (after ${maxAttempts} attempts)`,
+          errorMessage: isNonRetryable 
+            ? `${errorMessage} (non-retryable error)`
+            : `${errorMessage} (after ${maxAttempts} attempts)`,
           updatedAt: new Date(),
         },
       });
     } else {
-      // Will retry - keep post in PUBLISHING status
+      // Will retry - reset status to SCHEDULED so it can be retried
       const nextAttempt = attemptNumber + 1;
       const nextDelay = Math.pow(2, attemptNumber) * 2000; // Exponential backoff: 2s, 4s, 8s
       
@@ -237,6 +260,7 @@ socialPostsQueue.process(async (job) => {
       await prisma.post.update({
         where: { id: postId },
         data: {
+          status: PostStatus.SCHEDULED, // Reset to SCHEDULED for retry
           errorMessage: `${errorMessage} (attempt ${attemptNumber}/${maxAttempts}, retrying...)`,
           updatedAt: new Date(),
         },

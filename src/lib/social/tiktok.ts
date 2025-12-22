@@ -357,15 +357,29 @@ async function initializeVideoUpload(
   if (!response.ok) {
     const errorText = await response.text();
     let errorMessage = `Failed to initialize TikTok video upload: ${response.status} ${response.statusText}`;
+    let errorCode: string | undefined;
+    
     try {
       const errorJson = JSON.parse(errorText);
+      errorCode = errorJson.error?.code;
       errorMessage = errorJson.error?.message || errorJson.error?.code || errorMessage;
       console.error("[TikTok] Upload init error response:", JSON.stringify(errorJson, null, 2));
     } catch {
       console.error("[TikTok] Upload init error response (raw):", errorText);
       errorMessage = errorText || errorMessage;
     }
-    throw new Error(errorMessage);
+    
+    // Create error with code for retry detection
+    const error = new Error(errorMessage) as any;
+    error.tiktokErrorCode = errorCode;
+    error.isNonRetryable = errorCode && [
+      "spam_risk_too_many_pending_share",
+      "spam_risk_too_many_posts",
+      "access_token_invalid",
+      "scope_not_authorized",
+    ].includes(errorCode);
+    
+    throw error;
   }
 
   const data: TikTokVideoUploadResponse = await response.json();
@@ -378,7 +392,23 @@ async function initializeVideoUpload(
   // Check error.code first - only throw if error.code exists AND is NOT "ok"
   if (data.error && data.error.code && data.error.code !== "ok") {
     console.error("[TikTok] Upload init API error:", JSON.stringify(data.error, null, 2));
-    throw new Error(`TikTok upload init error: ${data.error.message || data.error.code || JSON.stringify(data.error)}`);
+    
+    // Check if error is non-retryable
+    const errorCode = data.error.code;
+    const isNonRetryable = [
+      "spam_risk_too_many_pending_share",
+      "spam_risk_too_many_posts",
+      "access_token_invalid",
+      "scope_not_authorized",
+    ].includes(errorCode);
+    
+    const error = new Error(
+      `TikTok upload init error: ${data.error.message || data.error.code || JSON.stringify(data.error)}`
+    ) as any;
+    error.tiktokErrorCode = errorCode;
+    error.isNonRetryable = isNonRetryable;
+    
+    throw error;
   }
 
   // Check root-level code field - "ok" means success, anything else is an error
