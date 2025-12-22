@@ -330,7 +330,7 @@ async function initializeVideoUpload(
   accessToken: string,
   videoUrl: string,
   caption: string
-): Promise<TikTokVideoUploadResponse["data"]> {
+): Promise<{ publish_id?: string; upload_id?: string; upload_url?: string }> {
   const response = await fetch(`${TIKTOK_API_URL}/post/publish/inbox/video/init/`, {
     method: "POST",
     headers: {
@@ -397,11 +397,17 @@ async function initializeVideoUpload(
     throw new Error("TikTok upload init failed: Missing upload_id or publish_id in response");
   }
 
+  const uploadId = data.data.upload_id || data.data.publish_id;
   console.log(
-    `[TikTok] Upload initialized successfully, upload_id: ${data.data.upload_id || data.data.publish_id}`
+    `[TikTok] Upload initialized successfully, upload_id: ${uploadId}`
   );
 
-  return data.data;
+  // Return non-undefined data
+  return {
+    publish_id: data.data.publish_id,
+    upload_id: data.data.upload_id,
+    upload_url: data.data.upload_url,
+  };
 }
 
 /**
