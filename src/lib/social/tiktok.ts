@@ -59,9 +59,13 @@ interface TikTokUserInfoResponse {
 }
 
 interface TikTokVideoUploadResponse {
-  data: {
-    publish_id: string;
-    upload_url: string;
+  code?: string; // "ok" for success
+  message?: string;
+  log_id?: string;
+  data?: {
+    publish_id?: string;
+    upload_id?: string;
+    upload_url?: string;
   };
   error?: {
     code: string;
@@ -365,10 +369,37 @@ async function initializeVideoUpload(
 
   const data: TikTokVideoUploadResponse = await response.json();
 
+  // Log full response for debugging
+  console.log("[TikTok] Upload init API response:", JSON.stringify(data, null, 2));
+
+  // ✅ FIX: TikTok returns code: "ok" for success, not an error!
+  // Check for error field first (some APIs use this format)
   if (data.error) {
     console.error("[TikTok] Upload init API error:", JSON.stringify(data.error, null, 2));
     throw new Error(`TikTok upload init error: ${data.error.message || data.error.code || JSON.stringify(data.error)}`);
   }
+
+  // Check code field - "ok" means success, anything else is an error
+  if (data.code && data.code !== "ok") {
+    console.error("[TikTok] Upload init API error (code field):", JSON.stringify(data, null, 2));
+    throw new Error(`TikTok upload init failed: ${data.message || data.code} (log_id: ${data.log_id || "unknown"})`);
+  }
+
+  // If code is "ok" or not present, check if we have data
+  if (!data.data) {
+    console.error("[TikTok] Upload init missing data field:", JSON.stringify(data, null, 2));
+    throw new Error("TikTok upload init failed: Missing data field in response");
+  }
+
+  // Check if we have upload_id or publish_id
+  if (!data.data.upload_id && !data.data.publish_id) {
+    console.error("[TikTok] Upload init missing upload_id/publish_id:", JSON.stringify(data, null, 2));
+    throw new Error("TikTok upload init failed: Missing upload_id or publish_id in response");
+  }
+
+  console.log(
+    `[TikTok] Upload initialized successfully, upload_id: ${data.data.upload_id || data.data.publish_id}`
+  );
 
   return data.data;
 }
@@ -444,9 +475,15 @@ export async function publishToTikTok(
     // TikTok will fetch the video from the URL automatically
     console.log(`[TikTok] Initializing video upload with PULL_FROM_URL...`);
     const uploadData = await initializeVideoUpload(profile.accessToken, videoUrl, caption);
-    const { publish_id } = uploadData;
+    
+    // TikTok API may return upload_id or publish_id depending on endpoint
+    const publishId = uploadData.publish_id || uploadData.upload_id;
+    
+    if (!publishId) {
+      throw new Error("TikTok upload init failed: Missing publish_id or upload_id in response");
+    }
 
-    console.log(`[TikTok] Publish ID: ${publish_id}`);
+    console.log(`[TikTok] Publish/Upload ID: ${publishId}`);
     console.log(`[TikTok] TikTok is fetching video from URL. This may take a few minutes...`);
 
     // Step 2: Poll for upload status
@@ -461,7 +498,7 @@ export async function publishToTikTok(
       console.log(`[TikTok] Checking upload status (attempt ${attempts}/${maxAttempts})...`);
 
       const statusResponse = await fetch(
-        `${TIKTOK_API_URL}/post/publish/status/fetch/?publish_id=${publish_id}`,
+        `${TIKTOK_API_URL}/post/publish/status/fetch/?publish_id=${publishId}`,
         {
           method: "GET",
           headers: {
@@ -481,6 +518,11 @@ export async function publishToTikTok(
 
       const statusData = await statusResponse.json();
       console.log(`[TikTok] Upload status:`, JSON.stringify(statusData, null, 2));
+
+      // ✅ FIX: Check code field - "ok" means success
+      if (statusData.code && statusData.code !== "ok") {
+        throw new Error(`TikTok upload status error: ${statusData.message || statusData.code}`);
+      }
 
       if (statusData.error) {
         throw new Error(`TikTok upload status error: ${statusData.error.message || statusData.error.code}`);
@@ -507,16 +549,16 @@ export async function publishToTikTok(
       throw new Error("TikTok video upload timed out. Please try again.");
     }
 
-    console.log(`[TikTok] Successfully published video. Publish ID: ${publish_id}`);
+    console.log(`[TikTok] Successfully published video. Publish ID: ${publishId}`);
 
     return {
-      platformPostId: publish_id,
+      platformPostId: publishId,
       metadata: {
         platform: "tiktok",
         publishedAt: new Date().toISOString(),
         username: profile.platformUsername,
         openId: profile.platformUserId,
-        publish_id: publish_id,
+        publish_id: publishId,
       },
     };
   } catch (error) {
