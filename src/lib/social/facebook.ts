@@ -247,9 +247,15 @@ export async function publishToFacebook(
   const pageId = profile.platformUserId;
   const accessToken = profile.accessToken;
 
-  // Prepare post data
+  // Prepare post data - ensure content is properly preserved
+  // Log content for debugging (truncated for long content)
+  const contentPreview = content.length > 100 ? content.substring(0, 100) + "..." : content;
+  console.log(`[Facebook API] Content preview:`, contentPreview);
+  console.log(`[Facebook API] Content length:`, content.length);
+  console.log(`[Facebook API] Content has emojis:`, /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(content));
+  
   const postData: any = {
-    message: content,
+    message: content, // Content is sent as-is, JSON.stringify will handle UTF-8 encoding
     access_token: accessToken,
   };
 
@@ -275,7 +281,9 @@ export async function publishToFacebook(
           postData.file_url = mediaUrl;
           const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json; charset=utf-8",
+            },
             body: JSON.stringify(postData),
           });
 
@@ -291,7 +299,9 @@ export async function publishToFacebook(
         postData.url = mediaUrl;
         const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/photos`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json; charset=utf-8",
+          },
           body: JSON.stringify(postData),
         });
 
@@ -309,7 +319,9 @@ export async function publishToFacebook(
       for (const mediaUrl of mediaUrls) {
         const photoResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/photos`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json; charset=utf-8",
+          },
           body: JSON.stringify({
             url: mediaUrl,
             published: false,
@@ -335,7 +347,9 @@ export async function publishToFacebook(
 
       const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/feed`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json; charset=utf-8",
+        },
         body: JSON.stringify(albumData),
       });
 
@@ -351,7 +365,9 @@ export async function publishToFacebook(
     console.log(`[Facebook API] Publishing text-only post to ${pageId}/feed`);
     const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/feed`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json; charset=utf-8",
+      },
       body: JSON.stringify(postData),
     });
 
@@ -409,6 +425,12 @@ export async function publishToInstagram(
   // 1. Create media container
   // 2. Publish the container
 
+  // Log content for debugging
+  const contentPreview = content.length > 100 ? content.substring(0, 100) + "..." : content;
+  console.log(`[Instagram API] Content preview:`, contentPreview);
+  console.log(`[Instagram API] Content length:`, content.length);
+  console.log(`[Instagram API] Content has emojis:`, /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(content));
+
   if (mediaUrls.length === 1) {
     // Single photo or video
     const mediaUrl = mediaUrls[0];
@@ -416,7 +438,7 @@ export async function publishToInstagram(
 
     // Step 1: Create container
     const containerData: any = {
-      caption: content,
+      caption: content, // Content is sent as-is, JSON.stringify will handle UTF-8 encoding
       access_token: accessToken,
     };
 
@@ -436,7 +458,9 @@ export async function publishToInstagram(
 
     const containerResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json; charset=utf-8",
+      },
       body: JSON.stringify(containerData),
     });
 
@@ -514,7 +538,9 @@ export async function publishToInstagram(
 
     const publishResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media_publish`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json; charset=utf-8",
+      },
       body: JSON.stringify(publishData),
     });
 
@@ -560,7 +586,9 @@ export async function publishToInstagram(
 
       const itemResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json; charset=utf-8",
+        },
         body: JSON.stringify(itemData),
       });
 
@@ -623,7 +651,9 @@ export async function publishToInstagram(
 
     const carouselResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json; charset=utf-8",
+      },
       body: JSON.stringify(carouselData),
     });
 
@@ -692,7 +722,9 @@ export async function publishToInstagram(
 
     const publishResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media_publish`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json; charset=utf-8",
+      },
       body: JSON.stringify(publishData),
     });
 
@@ -744,16 +776,24 @@ async function publishFacebookReel(
   // Alternative: Use /video_reels endpoint with 3-phase upload (more complex, requires direct file upload)
   // For now, we'll use the simpler approach with video_format_type
   
+  // Log content for debugging
+  const contentPreview = description.length > 100 ? description.substring(0, 100) + "..." : description;
+  console.log(`[Facebook API] Reel description preview:`, contentPreview);
+  console.log(`[Facebook API] Reel description length:`, description.length);
+  console.log(`[Facebook API] Reel description has emojis:`, /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(description));
+
   const reelData: any = {
     file_url: videoUrl,
-    description: description,
+    description: description, // Content is sent as-is, JSON.stringify will handle UTF-8 encoding
     video_format_type: "reels",
     access_token: accessToken,
   };
 
   const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json; charset=utf-8",
+    },
     body: JSON.stringify(reelData),
   });
 
@@ -767,7 +807,9 @@ async function publishFacebookReel(
       reelData.video_format_type = undefined;
       const fallbackResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json; charset=utf-8",
+        },
         body: JSON.stringify(reelData),
       });
       
