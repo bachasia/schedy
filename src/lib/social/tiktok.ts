@@ -334,6 +334,11 @@ async function initializeVideoUpload(
 ): Promise<{ publish_id?: string; upload_id?: string; upload_url?: string }> {
   // Use official Content Posting API "Direct Post - Video" endpoint
   // Docs: https://developers.tiktok.com/doc/content-posting-api-get-started
+  //
+  // Important: unaudited clients can only post to private accounts.
+  // TikTok will return error code "unaudited_client_can_only_post_to_private_accounts"
+  // if we try to publish PUBLIC content before the app is audited.
+  // Therefore we default to SELF_ONLY until the app passes audit.
   const response = await fetch(`${TIKTOK_API_URL}/post/publish/video/init/`, {
     method: "POST",
     headers: {
@@ -344,7 +349,9 @@ async function initializeVideoUpload(
       post_info: {
         title: caption,
         disable_comment: false,
-        privacy_level: "PUBLIC_TO_EVERYONE",
+        // For unaudited clients, TikTok only allows private posts.
+        // Once the app is audited, this can be changed to PUBLIC_TO_EVERYONE.
+        privacy_level: "SELF_ONLY",
       },
       source_info: {
         source: "PULL_FROM_URL",
@@ -376,6 +383,7 @@ async function initializeVideoUpload(
       "spam_risk_too_many_posts",
       "access_token_invalid",
       "scope_not_authorized",
+      "unaudited_client_can_only_post_to_private_accounts",
     ].includes(errorCode);
     
     throw error;
@@ -399,6 +407,7 @@ async function initializeVideoUpload(
       "spam_risk_too_many_posts",
       "access_token_invalid",
       "scope_not_authorized",
+      "unaudited_client_can_only_post_to_private_accounts",
     ].includes(errorCode);
     
     const error = new Error(
