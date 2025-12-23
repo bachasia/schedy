@@ -332,7 +332,9 @@ async function initializeVideoUpload(
   videoUrl: string,
   caption: string
 ): Promise<{ publish_id?: string; upload_id?: string; upload_url?: string }> {
-  const response = await fetch(`${TIKTOK_API_URL}/post/publish/inbox/video/init/`, {
+  // Use official Content Posting API "Direct Post - Video" endpoint
+  // Docs: https://developers.tiktok.com/doc/content-posting-api-get-started
+  const response = await fetch(`${TIKTOK_API_URL}/post/publish/video/init/`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${accessToken}`,
@@ -343,14 +345,11 @@ async function initializeVideoUpload(
         title: caption,
         disable_comment: false,
         privacy_level: "PUBLIC_TO_EVERYONE",
-        auto_add_music: false,
       },
       source_info: {
         source: "PULL_FROM_URL",
         video_url: videoUrl,
       },
-      post_mode: "DIRECT_POST",
-      media_type: "VIDEO",
     }),
   });
 
@@ -428,21 +427,19 @@ async function initializeVideoUpload(
     throw new Error("TikTok upload init failed: Missing data field in response");
   }
 
-  // Check if we have upload_id or publish_id
-  if (!data.data.upload_id && !data.data.publish_id) {
-    console.error("[TikTok] Upload init missing upload_id/publish_id:", JSON.stringify(data, null, 2));
-    throw new Error("TikTok upload init failed: Missing upload_id or publish_id in response");
+  // For Direct Post with PULL_FROM_URL, TikTok returns a publish_id (no upload_id)
+  if (!data.data.publish_id) {
+    console.error("[TikTok] Upload init missing publish_id:", JSON.stringify(data, null, 2));
+    throw new Error("TikTok upload init failed: Missing publish_id in response");
   }
 
-  const uploadId = data.data.upload_id || data.data.publish_id;
   console.log(
-    `[TikTok] Upload initialized successfully, upload_id: ${uploadId}`
+    `[TikTok] Upload initialized successfully, publish_id: ${data.data.publish_id}`
   );
 
-  // Return non-undefined data
+  // Return non-undefined data; upload_url is only present when using FILE_UPLOAD
   return {
     publish_id: data.data.publish_id,
-    upload_id: data.data.upload_id,
     upload_url: data.data.upload_url,
   };
 }
