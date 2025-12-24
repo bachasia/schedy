@@ -281,6 +281,11 @@ async function publishToSocialMedia(
   const { platform, content, mediaUrls, postFormat } = post;
   const format = postFormat || "POST";
 
+  // Log postFormat for debugging
+  console.log(`[Queue] Post ${post.id} - postFormat from database:`, postFormat);
+  console.log(`[Queue] Post ${post.id} - Using format:`, format);
+  console.log(`[Queue] Post ${post.id} - Platform:`, platform);
+
   try {
     switch (platform) {
       case "FACEBOOK":

@@ -430,6 +430,7 @@ export async function publishToInstagram(
   console.log(`[Instagram API] Content preview:`, contentPreview);
   console.log(`[Instagram API] Content length:`, content.length);
   console.log(`[Instagram API] Content has emojis:`, /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(content));
+  console.log(`[Instagram API] Post format received:`, postFormat);
 
   if (mediaUrls.length === 1) {
     // Single photo or video
@@ -452,9 +453,30 @@ export async function publishToInstagram(
         console.log(`[Instagram API] Publishing as regular video`);
       }
       containerData.video_url = mediaUrl;
+      
+      // Validate video URL format
+      if (!mediaUrl.startsWith("https://")) {
+        throw new Error(`Instagram video URL must use HTTPS. Got: ${mediaUrl.substring(0, 50)}...`);
+      }
+      
+      console.log(`[Instagram API] Video URL: ${mediaUrl}`);
     } else {
       containerData.image_url = mediaUrl;
+      console.log(`[Instagram API] Image URL: ${mediaUrl}`);
     }
+
+    // Validate caption length (Instagram limit: 2200 characters)
+    if (content.length > 2200) {
+      console.warn(`[Instagram API] Caption is ${content.length} characters, Instagram limit is 2200. Truncating...`);
+      containerData.caption = content.substring(0, 2197) + "...";
+    }
+
+    // Log request data (without access token for security)
+    const logData = { ...containerData };
+    if (logData.access_token) {
+      logData.access_token = "***REDACTED***";
+    }
+    console.log(`[Instagram API] Creating container with data:`, JSON.stringify(logData, null, 2));
 
     const containerResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
       method: "POST",
@@ -465,8 +487,41 @@ export async function publishToInstagram(
     });
 
     if (!containerResponse.ok) {
-      const error = await containerResponse.json();
-      throw new Error(`Failed to create Instagram container: ${error.error?.message || containerResponse.statusText}`);
+      const errorText = await containerResponse.text();
+      let error: any;
+      try {
+        error = JSON.parse(errorText);
+      } catch {
+        error = { message: errorText };
+      }
+      
+      // Log full error details for debugging
+      console.error(`[Instagram API] Container creation failed:`, {
+        status: containerResponse.status,
+        statusText: containerResponse.statusText,
+        error: error,
+        requestData: logData,
+      });
+      
+      // Extract detailed error message
+      const errorMessage = error.error?.message || error.message || containerResponse.statusText;
+      const errorCode = error.error?.code || error.code;
+      const errorSubcode = error.error?.error_subcode;
+      
+      let fullErrorMessage = `Failed to create Instagram container: ${errorMessage}`;
+      if (errorCode) {
+        fullErrorMessage += ` (code: ${errorCode})`;
+      }
+      if (errorSubcode) {
+        fullErrorMessage += ` (subcode: ${errorSubcode})`;
+      }
+      
+      // Add helpful hints for common errors
+      if (errorCode === 100 || errorMessage?.toLowerCase().includes("invalid parameter")) {
+        fullErrorMessage += `. Common causes: video URL not accessible, invalid video format, or missing required parameters.`;
+      }
+      
+      throw new Error(fullErrorMessage);
     }
 
     const container: InstagramContainerResponse = await containerResponse.json();
