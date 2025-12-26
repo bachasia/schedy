@@ -459,6 +459,26 @@ export async function publishToInstagram(
         throw new Error(`Instagram video URL must use HTTPS. Got: ${mediaUrl.substring(0, 50)}...`);
       }
       
+      // Validate video URL accessibility before creating container
+      // This helps prevent errors when multiple accounts try to access the same URL simultaneously
+      console.log(`[Instagram API] Validating video URL accessibility: ${mediaUrl}`);
+      try {
+        const urlCheckResponse = await fetch(mediaUrl, { 
+          method: "HEAD",
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+        });
+        
+        if (!urlCheckResponse.ok) {
+          console.warn(`[Instagram API] Video URL returned status ${urlCheckResponse.status}, but continuing...`);
+        } else {
+          console.log(`[Instagram API] Video URL is accessible (status: ${urlCheckResponse.status})`);
+        }
+      } catch (urlError: any) {
+        // Log but don't fail - URL might still be accessible from Facebook's servers
+        console.warn(`[Instagram API] Could not validate video URL accessibility: ${urlError.message}`);
+        console.log(`[Instagram API] Continuing with container creation (URL may still be accessible from Facebook servers)`);
+      }
+      
       console.log(`[Instagram API] Video URL: ${mediaUrl}`);
     } else {
       containerData.image_url = mediaUrl;
@@ -478,54 +498,118 @@ export async function publishToInstagram(
     }
     console.log(`[Instagram API] Creating container with data:`, JSON.stringify(logData, null, 2));
 
-    const containerResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json; charset=utf-8",
-      },
-      body: JSON.stringify(containerData),
-    });
-
-    if (!containerResponse.ok) {
-      const errorText = await containerResponse.text();
-      let error: any;
+    // Retry logic for container creation (especially important for Reels with multiple accounts)
+    const maxRetries = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        error = JSON.parse(errorText);
-      } catch {
-        error = { message: errorText };
-      }
-      
-      // Log full error details for debugging
-      console.error(`[Instagram API] Container creation failed:`, {
-        status: containerResponse.status,
-        statusText: containerResponse.statusText,
-        error: error,
-        requestData: logData,
-      });
-      
-      // Extract detailed error message
-      const errorMessage = error.error?.message || error.message || containerResponse.statusText;
-      const errorCode = error.error?.code || error.code;
-      const errorSubcode = error.error?.error_subcode;
-      
-      let fullErrorMessage = `Failed to create Instagram container: ${errorMessage}`;
-      if (errorCode) {
-        fullErrorMessage += ` (code: ${errorCode})`;
-      }
-      if (errorSubcode) {
-        fullErrorMessage += ` (subcode: ${errorSubcode})`;
-      }
-      
-      // Add helpful hints for common errors
-      if (errorCode === 100 || errorMessage?.toLowerCase().includes("invalid parameter")) {
-        fullErrorMessage += `. Common causes: video URL not accessible, invalid video format, or missing required parameters.`;
-      }
-      
-      throw new Error(fullErrorMessage);
-    }
+        // Add small delay between retries to avoid rate limiting
+        if (attempt > 1) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 2), 5000); // Exponential backoff: 1s, 2s, 4s (max 5s)
+          console.log(`[Instagram API] Retry attempt ${attempt}/${maxRetries} after ${delay}ms delay`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
 
-    const container: InstagramContainerResponse = await containerResponse.json();
-    const containerId = container.id;
+        const containerResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json; charset=utf-8",
+          },
+          body: JSON.stringify(containerData),
+        });
+
+        if (containerResponse.ok) {
+          const container: InstagramContainerResponse = await containerResponse.json();
+          const containerId = container.id;
+          console.log(`[Instagram API] Created container ${containerId} on attempt ${attempt}, status: ${container.status_code || container.status}`);
+          
+          // Continue with container processing
+          // We'll need to handle the rest of the function differently
+          // Let me check the rest of the code...
+          
+          // Store container for later use
+          (containerData as any).__containerId = containerId;
+          (containerData as any).__container = container;
+          break; // Success, exit retry loop
+        }
+
+        // Handle error response
+        const errorText = await containerResponse.text();
+        let error: any;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { message: errorText };
+        }
+        
+        const errorCode = error.error?.code || error.code;
+        const errorSubcode = error.error?.error_subcode;
+        
+        // Check if this is a retryable error
+        const isRetryable = errorCode === 100 || 
+                           errorCode === 4 || // Rate limit
+                           errorCode === 17 || // User request limit
+                           containerResponse.status === 429 || // Too many requests
+                           containerResponse.status >= 500; // Server errors
+        
+        if (!isRetryable || attempt === maxRetries) {
+          // Non-retryable error or last attempt - throw error
+          console.error(`[Instagram API] Container creation failed (attempt ${attempt}/${maxRetries}):`, {
+            status: containerResponse.status,
+            statusText: containerResponse.statusText,
+            error: error,
+            requestData: logData,
+          });
+          
+          // Extract detailed error message
+          const errorMessage = error.error?.message || error.message || containerResponse.statusText;
+          
+          let fullErrorMessage = `Failed to create Instagram container: ${errorMessage}`;
+          if (errorCode) {
+            fullErrorMessage += ` (code: ${errorCode})`;
+          }
+          if (errorSubcode) {
+            fullErrorMessage += ` (subcode: ${errorSubcode})`;
+          }
+          
+          // Add helpful hints for common errors
+          if (errorCode === 100 || errorMessage?.toLowerCase().includes("invalid parameter")) {
+            fullErrorMessage += `. Common causes: video URL not accessible, invalid video format, or missing required parameters.`;
+            if (errorSubcode === 2207067) {
+              fullErrorMessage += ` This error often occurs when multiple accounts try to access the same video URL simultaneously. Try scheduling posts with a delay between accounts.`;
+            }
+          }
+          
+          throw new Error(fullErrorMessage);
+        }
+        
+        // Retryable error - store and continue to next attempt
+        lastError = error;
+        console.warn(`[Instagram API] Container creation failed (attempt ${attempt}/${maxRetries}), will retry:`, {
+          status: containerResponse.status,
+          errorCode,
+          errorSubcode,
+          message: error.error?.message || error.message,
+        });
+        
+      } catch (fetchError: any) {
+        // Network or other errors
+        if (attempt === maxRetries) {
+          throw new Error(`Failed to create Instagram container after ${maxRetries} attempts: ${fetchError.message}`);
+        }
+        lastError = fetchError;
+        console.warn(`[Instagram API] Container creation error (attempt ${attempt}/${maxRetries}), will retry:`, fetchError.message);
+      }
+    }
+    
+    // If we get here without a container, something went wrong
+    if (!(containerData as any).__container) {
+      throw new Error(`Failed to create Instagram container after ${maxRetries} attempts`);
+    }
+    
+    const container: InstagramContainerResponse = (containerData as any).__container;
+    const containerId = (containerData as any).__containerId;
 
     console.log(`[Instagram API] Created container ${containerId}, status: ${container.status_code || container.status}`);
 

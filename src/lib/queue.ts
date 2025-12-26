@@ -349,6 +349,14 @@ async function publishToFacebook(
     }
   }
 
+  // Add delay for Reels when posting to multiple accounts to avoid rate limiting
+  if (postFormat === "REEL") {
+    // Add a small random delay (1-3 seconds) to space out requests
+    const delay = Math.floor(Math.random() * 2000) + 1000; // 1-3 seconds
+    console.log(`[Facebook] Adding ${delay}ms delay for Reel to avoid rate limiting`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+
   // Call real Facebook API with postFormat
   const result = await publishToFacebookAPI(profileId, content, mediaArray, postFormat);
 
@@ -382,6 +390,16 @@ async function publishToInstagram(
 
   if (mediaArray.length === 0) {
     throw new Error("Instagram posts require at least one media file");
+  }
+
+  // Add delay for Reels when posting to multiple accounts to avoid rate limiting
+  // This helps prevent the "Invalid parameter" error when multiple accounts try to access the same video URL
+  if (postFormat === "REEL") {
+    // Check if there are other Instagram Reel posts being processed
+    // Add a small random delay (1-3 seconds) to space out requests
+    const delay = Math.floor(Math.random() * 2000) + 1000; // 1-3 seconds
+    console.log(`[Instagram] Adding ${delay}ms delay for Reel to avoid rate limiting`);
+    await new Promise(resolve => setTimeout(resolve, delay));
   }
 
   // Call real Instagram API with postFormat
