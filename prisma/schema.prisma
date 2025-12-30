@@ -14,6 +14,7 @@ enum Platform {
   INSTAGRAM
   TIKTOK
   TWITTER
+  YOUTUBE
 }
 
 /// Type of media attached to a post

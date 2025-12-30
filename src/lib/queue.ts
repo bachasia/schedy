@@ -14,6 +14,10 @@ import {
   publishToTwitter as publishToTwitterAPI,
   handleTwitterError,
 } from "@/lib/social/twitter";
+import {
+  publishToYouTube as publishToYouTubeAPI,
+  handleYouTubeError,
+} from "@/lib/social/youtube";
 import { ensureValidToken } from "@/lib/social/token-manager";
 
 // Redis connection configuration from environment variables
@@ -300,6 +304,9 @@ async function publishToSocialMedia(
       case "TIKTOK":
         return await publishToTikTok(post.id, profile.id, content, mediaUrls);
 
+      case "YOUTUBE":
+        return await publishToYouTube(post.id, profile.id, content, mediaUrls);
+
       default:
         throw new Error(`Unsupported platform: ${platform}`);
     }
@@ -313,6 +320,9 @@ async function publishToSocialMedia(
       throw new Error(errorMessage);
     } else if (platform === "TWITTER") {
       const errorMessage = handleTwitterError(error);
+      throw new Error(errorMessage);
+    } else if (platform === "YOUTUBE") {
+      const errorMessage = handleYouTubeError(error);
       throw new Error(errorMessage);
     }
     throw error;
@@ -468,6 +478,39 @@ async function publishToTikTok(
   const result = await publishToTikTokAPI(profileId, postId, content, videoUrl);
 
   console.log(`[TikTok] Successfully published to TikTok. Publish ID: ${result.platformPostId}`);
+
+  return result;
+}
+
+/**
+ * YouTube API integration
+ */
+async function publishToYouTube(
+  postId: string,
+  profileId: string,
+  content: string,
+  mediaUrls: string,
+): Promise<{ platformPostId: string; metadata?: any }> {
+  console.log(`[YouTube] Publishing post ${postId} to profile ${profileId}`);
+
+  // Parse media URLs
+  const mediaArray = mediaUrls ? mediaUrls.split(",").filter(Boolean) : [];
+
+  if (mediaArray.length === 0) {
+    throw new Error("YouTube posts require at least one video file");
+  }
+
+  // YouTube only supports single video
+  if (mediaArray.length > 1) {
+    console.warn(`[YouTube] Multiple media files provided, using first video only`);
+  }
+
+  const videoUrl = mediaArray[0];
+
+  // Call real YouTube API
+  const result = await publishToYouTubeAPI(profileId, postId, content, videoUrl);
+
+  console.log(`[YouTube] Successfully published to YouTube. Video ID: ${result.platformPostId}`);
 
   return result;
 }

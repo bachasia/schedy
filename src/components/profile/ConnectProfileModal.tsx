@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Facebook, Instagram, Twitter, Video, ExternalLink } from "lucide-react";
+import { Facebook, Instagram, Twitter, Video, Play, ExternalLink } from "lucide-react";
 import axios from "axios";
 
 import {
@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER";
+type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 
 const connectProfileSchema = z.object({
   name: z.string().min(2, "Profile name must be at least 2 characters"),
@@ -89,6 +89,18 @@ const PLATFORM_INFO: Record<
       "Create a Twitter/X developer app",
       "Generate OAuth 2.0 tokens",
       "Copy the access token and user ID",
+    ],
+  },
+  YOUTUBE: {
+    name: "YouTube",
+    icon: Play,
+    color: "text-red-600",
+    docs: "https://developers.google.com/youtube/v3/guides/auth",
+    instructions: [
+      "Go to Google Cloud Console",
+      "Create OAuth 2.0 credentials",
+      "Generate access token with YouTube Data API v3 scopes",
+      "Copy the token and your channel ID",
     ],
   },
 };
@@ -194,8 +206,8 @@ export function ConnectProfileModal({
           </div>
         ) : (
           <div className="space-y-6">
-            {/* OAuth Connect (for Facebook, Instagram, TikTok, and Twitter) */}
-            {(selectedPlatform === "FACEBOOK" || selectedPlatform === "INSTAGRAM" || selectedPlatform === "TIKTOK" || selectedPlatform === "TWITTER") && (
+            {/* OAuth Connect (for Facebook, Instagram, TikTok, Twitter, and YouTube) */}
+            {(selectedPlatform === "FACEBOOK" || selectedPlatform === "INSTAGRAM" || selectedPlatform === "TIKTOK" || selectedPlatform === "TWITTER" || selectedPlatform === "YOUTUBE") && (
               <div className="space-y-3">
                 <div className="text-center">
                   <p className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -210,12 +222,15 @@ export function ConnectProfileModal({
                       selectedPlatform === "INSTAGRAM" && "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700",
                       selectedPlatform === "TIKTOK" && "bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200",
                       selectedPlatform === "TWITTER" && "bg-sky-500 hover:bg-sky-600",
+                      selectedPlatform === "YOUTUBE" && "bg-red-600 hover:bg-red-700",
                     )}
                     onClick={() => {
                       if (selectedPlatform === "TIKTOK") {
                         window.location.href = "/api/social/tiktok/connect";
                       } else if (selectedPlatform === "TWITTER") {
                         window.location.href = "/api/social/twitter/connect";
+                      } else if (selectedPlatform === "YOUTUBE") {
+                        window.location.href = "/api/social/youtube/connect";
                       } else {
                         window.location.href = `/api/social/facebook/connect?type=${selectedPlatform.toLowerCase()}`;
                       }

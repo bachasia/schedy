@@ -93,6 +93,9 @@ function getPostUrl(
       return username
         ? `https://www.tiktok.com/@${username}/video/${platformPostId}`
         : `https://www.tiktok.com/`;
+    case "YOUTUBE":
+      // YouTube video URL format: https://www.youtube.com/watch?v={video-id}
+      return `https://www.youtube.com/watch?v=${platformPostId}`;
     default:
       return "#";
   }

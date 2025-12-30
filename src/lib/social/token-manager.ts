@@ -18,6 +18,10 @@ import {
   refreshTwitterToken as refreshTwitterTokenAPI,
   handleTwitterError,
 } from "@/lib/social/twitter";
+import {
+  refreshYouTubeToken as refreshYouTubeTokenAPI,
+  handleYouTubeError,
+} from "@/lib/social/youtube";
 
 // Token refresh threshold: refresh if expires within 24 hours
 const TOKEN_REFRESH_THRESHOLD_HOURS = 24;
@@ -277,6 +281,77 @@ export async function refreshTwitterToken(profileId: string): Promise<{
 }
 
 /**
+ * Refresh YouTube access token
+ * YouTube OAuth 2.0 uses refresh tokens
+ */
+export async function refreshYouTubeToken(profileId: string): Promise<{
+  success: boolean;
+  message: string;
+  expiresAt?: Date;
+}> {
+  console.log(`[TokenManager] Refreshing YouTube token for profile ${profileId}`);
+
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id: profileId },
+      select: {
+        id: true,
+        platform: true,
+        refreshToken: true,
+      },
+    });
+
+    if (!profile) {
+      throw new Error(`Profile ${profileId} not found`);
+    }
+
+    if (profile.platform !== Platform.YOUTUBE) {
+      throw new Error(`Profile ${profileId} is not a YouTube profile`);
+    }
+
+    if (!profile.refreshToken) {
+      throw new Error(`Profile ${profileId} has no refresh token. Please re-authenticate.`);
+    }
+
+    // Use YouTube refresh token
+    const tokenResponse = await refreshYouTubeTokenAPI(profile.refreshToken);
+
+    // Calculate expiration
+    const expiresAt = new Date();
+    expiresAt.setSeconds(expiresAt.getSeconds() + tokenResponse.expires_in);
+
+    // Update profile with new tokens
+    await prisma.profile.update({
+      where: { id: profileId },
+      data: {
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token || profile.refreshToken, // Keep old if not provided
+        tokenExpiresAt: expiresAt,
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log(
+      `[TokenManager] Successfully refreshed YouTube token for profile ${profileId} (expires: ${expiresAt.toISOString()})`
+    );
+
+    return {
+      success: true,
+      message: `Token refreshed successfully. Expires in ${Math.floor(tokenResponse.expires_in / 86400)} days.`,
+      expiresAt,
+    };
+  } catch (error: any) {
+    const errorMessage = handleYouTubeError(error);
+    console.error(`[TokenManager] Failed to refresh YouTube token for profile ${profileId}:`, errorMessage);
+
+    return {
+      success: false,
+      message: errorMessage,
+    };
+  }
+}
+
+/**
  * Refresh token for any platform
  */
 export async function refreshToken(profileId: string): Promise<{
@@ -307,6 +382,9 @@ export async function refreshToken(profileId: string): Promise<{
 
     case Platform.TWITTER:
       return await refreshTwitterToken(profileId);
+
+    case Platform.YOUTUBE:
+      return await refreshYouTubeToken(profileId);
 
     default:
       return {

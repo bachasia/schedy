@@ -12,6 +12,7 @@ import {
   Instagram,
   Twitter,
   Video,
+  Play,
   ShieldCheck,
   ShieldAlert,
   AlertTriangle,
@@ -25,7 +26,7 @@ import { ConnectProfileModal } from "@/components/profile/ConnectProfileModal";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { DeleteProfileDialog } from "@/components/profile/DeleteProfileDialog";
 
-type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER";
+type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 
 type Profile = {
   id: string;
@@ -56,6 +57,7 @@ const PLATFORM_LABELS: Record<Platform, string> = {
   INSTAGRAM: "Instagram",
   TIKTOK: "TikTok",
   TWITTER: "Twitter",
+  YOUTUBE: "YouTube",
 };
 
 function PlatformIcon({ platform }: { platform: Platform }) {
@@ -68,6 +70,8 @@ function PlatformIcon({ platform }: { platform: Platform }) {
       return <Twitter className="h-3.5 w-3.5 text-sky-500" />;
     case "TIKTOK":
       return <Video className="h-3.5 w-3.5 text-emerald-500" />;
+    case "YOUTUBE":
+      return <Play className="h-3.5 w-3.5 text-red-600" />;
     default:
       return null;
   }
@@ -195,7 +199,7 @@ export default function ProfilesPage() {
           active={platformFilter === "ALL"}
           onClick={() => setPlatformFilter("ALL")}
         />
-        {(["FACEBOOK", "INSTAGRAM", "TIKTOK", "TWITTER"] as Platform[]).map(
+        {(["FACEBOOK", "INSTAGRAM", "TIKTOK", "TWITTER", "YOUTUBE"] as Platform[]).map(
           (platform) => (
             <FilterChip
               key={platform}
