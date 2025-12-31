@@ -108,19 +108,28 @@ export async function POST(request: Request) {
     // Generate a groupId for all posts created in this action
     const groupId = randomUUID();
 
+    // If postFormat is REEL, convert YouTube profiles to SHORT format
+    const isReel = postFormat === "REEL";
+
     // Create a post for each profile
     const posts = await Promise.all(
-    profileIds.map((profileId) => {
-      const profile = profiles.find((p) => p.id === profileId);
-      if (!profile) return null;
+    profiles.map((profile) => {
+      // Determine post format: SHORT for YouTube when original is REEL, otherwise use original format
+      let finalPostFormat = (postFormat || "POST") as "POST" | "REEL" | "SHORT" | "STORY";
+      
+      // If this is a YouTube profile and original format is REEL, use SHORT
+      if (profile.platform === "YOUTUBE" && isReel) {
+        finalPostFormat = "SHORT";
+        console.log(`[API] POST /api/posts - Converting REEL to SHORT for YouTube profile ${profile.id}`);
+      }
 
       const postData: any = {
         userId: userId,
-        profileId,
+        profileId: profile.id,
         content,
         mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls.join(",") : "", // Convert array to comma-separated string
         platform: profile.platform,
-        postFormat: (postFormat || "POST") as "POST" | "REEL" | "SHORT" | "STORY",
+        postFormat: finalPostFormat,
         status: status as PostStatus,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         groupId: groupId, // Assign same groupId to all posts in this batch

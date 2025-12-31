@@ -187,21 +187,21 @@ export default function NewPostPage() {
         return;
       }
 
-      // Validate Reel requirements
+      // Validate Reel/Shorts requirements
       if (postFormat === "REEL") {
         const videoFiles = mediaFiles.filter((f) => f.type === "video");
         if (videoFiles.length === 0) {
-          alert("Reels require at least one video file. Please upload a video.");
+          alert("Reels/Shorts require at least one video file. Please upload a video.");
           setIsSaving(false);
           return;
         }
         if (videoFiles.length > 1) {
-          alert("Reels can only have one video. Please remove extra videos.");
+          alert("Reels/Shorts can only have one video. Please remove extra videos.");
           setIsSaving(false);
           return;
         }
         if (mediaFiles.some((f) => f.type === "image")) {
-          alert("Reels cannot include images. Please remove images or switch to Post format.");
+          alert("Reels/Shorts cannot include images. Please remove images or switch to Post format.");
           setIsSaving(false);
           return;
         }
@@ -267,21 +267,21 @@ export default function NewPostPage() {
         return;
       }
 
-      // Validate Reel requirements
+      // Validate Reel/Shorts requirements
       if (postFormat === "REEL") {
         const videoFiles = mediaFiles.filter((f) => f.type === "video");
         if (videoFiles.length === 0) {
-          alert("Reels require at least one video file. Please upload a video.");
+          alert("Reels/Shorts require at least one video file. Please upload a video.");
           setIsSaving(false);
           return;
         }
         if (videoFiles.length > 1) {
-          alert("Reels can only have one video. Please remove extra videos.");
+          alert("Reels/Shorts can only have one video. Please remove extra videos.");
           setIsSaving(false);
           return;
         }
         if (mediaFiles.some((f) => f.type === "image")) {
-          alert("Reels cannot include images. Please remove images or switch to Post format.");
+          alert("Reels/Shorts cannot include images. Please remove images or switch to Post format.");
           setIsSaving(false);
           return;
         }
@@ -525,19 +525,19 @@ export default function NewPostPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="POST">Post</SelectItem>
-                      <SelectItem value="REEL">Reel</SelectItem>
+                      <SelectItem value="REEL">Reel/Shorts</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-zinc-500">
                     {postFormat === "REEL" 
-                      ? "Reels require a single vertical video (9:16, 15-90 seconds)"
+                      ? "Reels (Facebook/Instagram) and Shorts (YouTube) require a single vertical video (9:16, 15-90 seconds)"
                       : "Regular posts can include text, images, or videos"}
                   </p>
                   {postFormat === "REEL" && mediaFiles.length > 0 && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
                       {mediaFiles.some(f => f.type === "video") 
                         ? "✓ Video detected. Make sure it's vertical (9:16) and 15-90 seconds."
-                        : "⚠ Reels require a video file. Please upload a video in the Media tab."}
+                        : "⚠ Reels/Shorts require a video file. Please upload a video in the Media tab."}
                     </div>
                   )}
                 </div>

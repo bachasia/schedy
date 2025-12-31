@@ -305,7 +305,7 @@ async function publishToSocialMedia(
         return await publishToTikTok(post.id, profile.id, content, mediaUrls);
 
       case "YOUTUBE":
-        return await publishToYouTube(post.id, profile.id, content, mediaUrls);
+        return await publishToYouTube(post.id, profile.id, content, mediaUrls, format);
 
       default:
         throw new Error(`Unsupported platform: ${platform}`);
@@ -490,8 +490,10 @@ async function publishToYouTube(
   profileId: string,
   content: string,
   mediaUrls: string,
+  postFormat: "POST" | "REEL" | "SHORT" | "STORY" = "POST",
 ): Promise<{ platformPostId: string; metadata?: any }> {
   console.log(`[YouTube] Publishing post ${postId} to profile ${profileId}`);
+  console.log(`[YouTube] Post format: ${postFormat}`);
 
   // Parse media URLs
   const mediaArray = mediaUrls ? mediaUrls.split(",").filter(Boolean) : [];
@@ -507,8 +509,15 @@ async function publishToYouTube(
 
   const videoUrl = mediaArray[0];
 
+  // For SHORT format, add "#Shorts" to the content if not already present
+  let finalContent = content;
+  if (postFormat === "SHORT" && !content.includes("#Shorts") && !content.includes("#shorts")) {
+    finalContent = `${content} #Shorts`;
+    console.log(`[YouTube] Added #Shorts tag for SHORT format`);
+  }
+
   // Call real YouTube API
-  const result = await publishToYouTubeAPI(profileId, postId, content, videoUrl);
+  const result = await publishToYouTubeAPI(profileId, postId, finalContent, videoUrl);
 
   console.log(`[YouTube] Successfully published to YouTube. Video ID: ${result.platformPostId}`);
 
