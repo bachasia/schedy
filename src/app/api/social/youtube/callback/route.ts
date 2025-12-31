@@ -51,28 +51,52 @@ export async function GET(request: NextRequest) {
     // Extract userId for TypeScript type narrowing
     const userId = session.user.id;
 
-    // Verify state and get code verifier
-    const storedState = await prisma.$queryRaw<Array<{
-      codeVerifier: string;
-      expiresAt: string;
-    }>>`
-      SELECT codeVerifier, expiresAt
-      FROM OAuthState
-      WHERE userId = ${userId}
-        AND state = ${state}
-        AND platform = 'YOUTUBE'
-        AND expiresAt > datetime('now')
-      LIMIT 1
-    `;
+    // Log for debugging
+    console.log(`[YouTube] Looking for OAuthState with state: ${state}, userId: ${userId}`);
 
-    if (!storedState || storedState.length === 0) {
+    // Verify state and get code verifier using Prisma client
+    const storedState = await prisma.oAuthState.findFirst({
+      where: {
+        userId: userId,
+        state: state,
+        platform: "YOUTUBE",
+        expiresAt: {
+          gt: new Date(), // Greater than current time
+        },
+      },
+      select: {
+        codeVerifier: true,
+        expiresAt: true,
+      },
+    });
+
+    if (!storedState) {
+      // Log more details for debugging
+      const allStates = await prisma.oAuthState.findMany({
+        where: {
+          userId: userId,
+          platform: "YOUTUBE",
+        },
+        select: {
+          state: true,
+          expiresAt: true,
+          createdAt: true,
+        },
+      });
       console.error("[YouTube] Invalid or expired state parameter");
+      console.error(`[YouTube] State received: ${state}`);
+      console.error(`[YouTube] Found ${allStates.length} OAuthState records for this user/platform`);
+      allStates.forEach((s, i) => {
+        console.error(`[YouTube] State ${i + 1}: ${s.state}, expiresAt: ${s.expiresAt}, createdAt: ${s.createdAt}`);
+      });
+      
       const errorUrl = new URL("/profiles", baseUrl);
       errorUrl.searchParams.set("error", "Invalid or expired YouTube authorization state");
       return NextResponse.redirect(errorUrl);
     }
 
-    const codeVerifier = storedState[0].codeVerifier;
+    const codeVerifier = storedState.codeVerifier;
+    console.log(`[YouTube] Found valid OAuthState, expiresAt: ${storedState.expiresAt}`);
 
     // Exchange code for access token
     console.log(`[YouTube] Exchanging code for access token...`);

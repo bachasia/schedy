@@ -34,16 +34,20 @@ export async function GET() {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
-    // Delete any existing OAuthState for this user/platform to avoid accumulation
+    // Delete only expired OAuthState records for this user/platform to avoid accumulation
+    // Don't delete active states as they might be in use
     await prisma.oAuthState.deleteMany({
       where: {
         userId: session.user.id,
         platform: "YOUTUBE",
+        expiresAt: {
+          lt: new Date(), // Less than current time (expired)
+        },
       },
     });
 
     // Store state and code verifier temporarily
-    await prisma.oAuthState.create({
+    const oauthState = await prisma.oAuthState.create({
       data: {
         userId: session.user.id,
         state: state,
@@ -53,10 +57,20 @@ export async function GET() {
       },
     });
 
+    console.log(`[YouTube] OAuthState created:`, {
+      id: oauthState.id,
+      state: oauthState.state,
+      userId: oauthState.userId,
+      platform: oauthState.platform,
+      expiresAt: oauthState.expiresAt,
+      createdAt: oauthState.createdAt,
+    });
+
     // Generate YouTube OAuth URL
     const authUrl = generateYouTubeAuthUrl(state, codeChallenge);
 
     console.log(`[YouTube] Redirecting user ${session.user.id} to YouTube OAuth`);
+    console.log(`[YouTube] Auth URL: ${authUrl}`);
 
     // Redirect to YouTube authorization page
     return NextResponse.redirect(authUrl);
