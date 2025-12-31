@@ -281,20 +281,30 @@ async function initializeResumableUpload(
     .filter(tag => tag.length > 0)
     .slice(0, 30);
 
+  // Build snippet with all required fields
+  const snippet: any = {
+    title: title,
+    description: description || "",
+    categoryId: videoMetadata.categoryId || "22", // People & Blogs - required field
+  };
+
+  // Only add tags if we have any (optional field)
+  if (tags.length > 0) {
+    snippet.tags = tags;
+  }
+
   const metadata = {
-    snippet: {
-      title: title,
-      description: description || "", // Description can be empty
-      tags: tags.length > 0 ? tags : undefined, // Only include tags if not empty
-      categoryId: videoMetadata.categoryId || "22", // People & Blogs
-    },
+    snippet: snippet,
     status: {
       privacyStatus: videoMetadata.privacyStatus || "public",
       selfDeclaredMadeForKids: false,
     },
   };
 
-  console.log(`[YouTube] Upload metadata:`, JSON.stringify(metadata, null, 2));
+  // Remove any undefined values from metadata to avoid issues
+  const cleanMetadata = JSON.parse(JSON.stringify(metadata));
+
+  console.log(`[YouTube] Upload metadata:`, JSON.stringify(cleanMetadata, null, 2));
 
   const response = await fetch(
     `${YOUTUBE_API_URL}/videos?uploadType=resumable&part=snippet,status`,
@@ -305,13 +315,30 @@ async function initializeResumableUpload(
         "Content-Type": "application/json",
         "X-Upload-Content-Type": "video/*",
       },
-      body: JSON.stringify(metadata),
+      body: JSON.stringify(cleanMetadata),
     }
   );
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[YouTube] Upload initialization error:`, errorText);
+    let errorData;
+    try {
+      errorData = JSON.parse(errorText);
+    } catch {
+      errorData = errorText;
+    }
+    
+    console.error(`[YouTube] Upload initialization failed:`);
+    console.error(`[YouTube] Status: ${response.status} ${response.statusText}`);
+    console.error(`[YouTube] Error response:`, errorData);
+    
+    // Try to extract more detailed error information
+    if (errorData?.error?.errors) {
+      errorData.error.errors.forEach((err: any, idx: number) => {
+        console.error(`[YouTube] Error ${idx + 1}:`, err);
+      });
+    }
+    
     throw new Error(`Failed to initialize upload: ${errorText}`);
   }
 
