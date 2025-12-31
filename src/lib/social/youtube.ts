@@ -266,11 +266,26 @@ async function initializeResumableUpload(
     privacyStatus?: "public" | "private" | "unlisted";
   }
 ): Promise<string> {
+  // YouTube limits: title max 100 chars, description max 5000 chars
+  const title = videoMetadata.title.substring(0, 100).trim();
+  const description = videoMetadata.description.substring(0, 5000).trim();
+
+  // Ensure title is not empty
+  if (!title) {
+    throw new Error("Video title cannot be empty");
+  }
+
+  // Clean tags - max 500 chars total, max 30 tags, each tag max 30 chars
+  const tags = (videoMetadata.tags || [])
+    .map(tag => tag.substring(0, 30).trim())
+    .filter(tag => tag.length > 0)
+    .slice(0, 30);
+
   const metadata = {
     snippet: {
-      title: videoMetadata.title,
-      description: videoMetadata.description,
-      tags: videoMetadata.tags || [],
+      title: title,
+      description: description || "", // Description can be empty
+      tags: tags.length > 0 ? tags : undefined, // Only include tags if not empty
       categoryId: videoMetadata.categoryId || "22", // People & Blogs
     },
     status: {
@@ -278,6 +293,8 @@ async function initializeResumableUpload(
       selfDeclaredMadeForKids: false,
     },
   };
+
+  console.log(`[YouTube] Upload metadata:`, JSON.stringify(metadata, null, 2));
 
   const response = await fetch(
     `${YOUTUBE_API_URL}/videos?uploadType=resumable&part=snippet,status`,
@@ -293,8 +310,9 @@ async function initializeResumableUpload(
   );
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to initialize upload: ${error}`);
+    const errorText = await response.text();
+    console.error(`[YouTube] Upload initialization error:`, errorText);
+    throw new Error(`Failed to initialize upload: ${errorText}`);
   }
 
   const uploadUrl = response.headers.get("Location");
@@ -424,11 +442,26 @@ export async function publishToYouTube(
     const videoUrl = mediaArray[0];
 
     // Generate video title from content if not provided
-    const videoTitle = title || content.substring(0, 100) || "Untitled Video";
+    // For Shorts, prefer title from first line of content, otherwise use provided title
+    let videoTitle = title;
+    if (!videoTitle && content) {
+      // Extract first line or first 100 chars
+      const firstLine = content.split('\n')[0].trim();
+      videoTitle = firstLine.substring(0, 100) || "Untitled Video";
+    }
+    if (!videoTitle) {
+      videoTitle = "Untitled Video";
+    }
+
+    // Ensure title is not empty and within limits
+    videoTitle = videoTitle.trim().substring(0, 100);
+    if (!videoTitle) {
+      videoTitle = "Untitled Video";
+    }
 
     console.log(`[YouTube] Starting video upload for: ${videoUrl}`);
-    console.log(`[YouTube] Title: ${videoTitle}`);
-    console.log(`[YouTube] Description: ${content.substring(0, 200)}...`);
+    console.log(`[YouTube] Title: ${videoTitle} (${videoTitle.length} chars)`);
+    console.log(`[YouTube] Description: ${content.substring(0, 200)}... (${content.length} chars)`);
 
     // Step 1: Download video file
     console.log(`[YouTube] Step 1: Downloading video file...`);

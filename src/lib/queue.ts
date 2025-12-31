@@ -516,8 +516,12 @@ async function publishToYouTube(
     console.log(`[YouTube] Added #Shorts tag for SHORT format`);
   }
 
-  // Call real YouTube API
-  const result = await publishToYouTubeAPI(profileId, postId, finalContent, videoUrl);
+  // Extract title from content (first line or first 100 chars)
+  const titleMatch = finalContent.match(/^(.+?)(?:\n|$)/);
+  const videoTitle = titleMatch ? titleMatch[1].substring(0, 100) : finalContent.substring(0, 100) || "Untitled Video";
+
+  // Call real YouTube API - pass mediaUrls as comma-separated string and title separately
+  const result = await publishToYouTubeAPI(profileId, postId, finalContent, videoUrl, videoTitle);
 
   console.log(`[YouTube] Successfully published to YouTube. Video ID: ${result.platformPostId}`);
 
