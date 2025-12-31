@@ -315,7 +315,7 @@ export default function MediaPage() {
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.open(item.url, "_blank");
@@ -325,7 +325,8 @@ export default function MediaPage() {
                   </Button>
                   <Button
                     size="sm"
-                    variant="destructive"
+                    variant="outline"
+                    className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleteItem(item);
@@ -411,7 +412,8 @@ export default function MediaPage() {
               Cancel
             </Button>
             <Button
-              variant="destructive"
+              variant="outline"
+              className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400"
               onClick={() => deleteItem && handleDelete(deleteItem)}
             >
               Delete
