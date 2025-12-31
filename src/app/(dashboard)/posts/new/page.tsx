@@ -398,7 +398,56 @@ export default function NewPostPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Left: Form */}
             <div className="space-y-6">
-              {/* Profile Selector */}
+              {/* Post Format Selector - Moved to top */}
+              <div className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+                <Label className="text-base font-semibold">
+                  Post Format
+                </Label>
+                <Select
+                  value={postFormat}
+                  onValueChange={(value: "POST" | "REEL") => {
+                    setPostFormat(value);
+                    // Clear selected profiles that don't match the new format
+                    const allowedPlatforms = value === "REEL" 
+                      ? ["FACEBOOK", "INSTAGRAM", "YOUTUBE"]
+                      : ["FACEBOOK", "INSTAGRAM"];
+                    
+                    const newSelectedIds = selectedProfileIds.filter(profileId => {
+                      const profile = profiles.find(p => p.id === profileId);
+                      return profile && allowedPlatforms.includes(profile.platform);
+                    });
+                    
+                    setValue("profileIds", newSelectedIds);
+                    
+                    // If switching to REEL and no video, show warning
+                    if (value === "REEL" && !mediaFiles.some(f => f.type === "video")) {
+                      // Will be validated on submit
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="POST">Post</SelectItem>
+                    <SelectItem value="REEL">Reel/Shorts</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-zinc-500">
+                  {postFormat === "REEL" 
+                    ? "Reels (Facebook/Instagram) and Shorts (YouTube) require a single vertical video (9:16, 15-90 seconds)"
+                    : "Regular posts can include text, images, or videos"}
+                </p>
+                {postFormat === "REEL" && mediaFiles.length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+                    {mediaFiles.some(f => f.type === "video") 
+                      ? "✓ Video detected. Make sure it's vertical (9:16) and 15-90 seconds."
+                      : "⚠ Reels/Shorts require a video file. Please upload a video in the Media tab."}
+                  </div>
+                )}
+              </div>
+
+              {/* Profile Selector - Filtered by Post Format */}
               <div className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-semibold">
@@ -413,88 +462,103 @@ export default function NewPostPage() {
                   <div className="py-4 text-center text-sm text-zinc-500">
                     Loading profiles...
                   </div>
-                ) : profiles.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center dark:border-zinc-700 dark:bg-zinc-900">
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      No active profiles found.
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => router.push("/profiles")}
-                    >
-                      Connect a Profile
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {profiles.map((profile) => {
-                      const Icon = PLATFORM_INFO[profile.platform].icon;
-                      const isSelected = selectedProfileIds.includes(profile.id);
-
-                      return (
-                        <button
-                          key={profile.id}
-                          type="button"
-                          onClick={() => handleProfileToggle(profile.id)}
-                          className={cn(
-                            "flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-all",
-                            isSelected
-                              ? "border-zinc-900 bg-zinc-50 shadow-sm dark:border-zinc-100 dark:bg-zinc-900"
-                              : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700",
-                          )}
+                ) : (() => {
+                  // Filter profiles based on post format
+                  const allowedPlatforms = postFormat === "REEL" 
+                    ? ["FACEBOOK", "INSTAGRAM", "YOUTUBE"]
+                    : ["FACEBOOK", "INSTAGRAM"];
+                  
+                  const filteredProfiles = profiles.filter(p => allowedPlatforms.includes(p.platform));
+                  
+                  if (filteredProfiles.length === 0) {
+                    return (
+                      <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center dark:border-zinc-700 dark:bg-zinc-900">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                          {postFormat === "REEL" 
+                            ? "No Facebook, Instagram, or YouTube profiles found."
+                            : "No Facebook or Instagram profiles found."}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => router.push("/profiles")}
                         >
-                          <div
+                          Connect a Profile
+                        </Button>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="space-y-2">
+                      {filteredProfiles.map((profile) => {
+                        const Icon = PLATFORM_INFO[profile.platform].icon;
+                        const isSelected = selectedProfileIds.includes(profile.id);
+
+                        return (
+                          <button
+                            key={profile.id}
+                            type="button"
+                            onClick={() => handleProfileToggle(profile.id)}
                             className={cn(
-                              "flex h-8 w-8 items-center justify-center rounded-full",
+                              "flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-all",
                               isSelected
-                                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                                : "bg-zinc-100 dark:bg-zinc-800",
+                                ? "border-zinc-900 bg-zinc-50 shadow-sm dark:border-zinc-100 dark:bg-zinc-900"
+                                : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700",
                             )}
                           >
-                            <Icon
+                            <div
                               className={cn(
-                                "h-4 w-4",
+                                "flex h-8 w-8 items-center justify-center rounded-full",
                                 isSelected
-                                  ? "text-white dark:text-zinc-900"
-                                  : PLATFORM_INFO[profile.platform].color,
+                                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                                  : "bg-zinc-100 dark:bg-zinc-800",
                               )}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-zinc-900 dark:text-zinc-50">
-                              {profile.name || PLATFORM_INFO[profile.platform].name}
+                            >
+                              <Icon
+                                className={cn(
+                                  "h-4 w-4",
+                                  isSelected
+                                    ? "text-white dark:text-zinc-900"
+                                    : PLATFORM_INFO[profile.platform].color,
+                                )}
+                              />
                             </div>
-                            {profile.platformUsername && (
-                              <div className="text-xs text-zinc-500">
-                                @{profile.platformUsername}
+                            <div className="flex-1">
+                              <div className="font-medium text-zinc-900 dark:text-zinc-50">
+                                {profile.name || PLATFORM_INFO[profile.platform].name}
                               </div>
-                            )}
-                          </div>
-                          <div
-                            className={cn(
-                              "h-4 w-4 rounded-full border-2",
-                              isSelected
-                                ? "border-zinc-900 bg-zinc-900 dark:border-zinc-100 dark:bg-zinc-100"
-                                : "border-zinc-300 dark:border-zinc-700",
-                            )}
-                          >
-                            {isSelected && (
-                              <svg
-                                className="h-full w-full text-white dark:text-zinc-900"
-                                fill="currentColor"
-                                viewBox="0 0 12 12"
-                              >
-                                <path d="M10 3L4.5 8.5L2 6" />
-                              </svg>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                              {profile.platformUsername && (
+                                <div className="text-xs text-zinc-500">
+                                  @{profile.platformUsername}
+                                </div>
+                              )}
+                            </div>
+                            <div
+                              className={cn(
+                                "h-4 w-4 rounded-full border-2",
+                                isSelected
+                                  ? "border-zinc-900 bg-zinc-900 dark:border-zinc-100 dark:bg-zinc-100"
+                                  : "border-zinc-300 dark:border-zinc-700",
+                              )}
+                            >
+                              {isSelected && (
+                                <svg
+                                  className="h-full w-full text-white dark:text-zinc-900"
+                                  fill="currentColor"
+                                  viewBox="0 0 12 12"
+                                >
+                                  <path d="M10 3L4.5 8.5L2 6" />
+                                </svg>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 {errors.profileIds && (
                   <div className="flex items-center gap-2 text-sm text-red-600">
@@ -503,45 +567,6 @@ export default function NewPostPage() {
                   </div>
                 )}
               </div>
-
-              {/* Post Format Selector */}
-              {selectedProfiles.length > 0 && selectedProfiles.some(p => p.platform === "FACEBOOK" || p.platform === "INSTAGRAM") && (
-                <div className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-                  <Label className="text-base font-semibold">
-                    Post Format
-                  </Label>
-                  <Select
-                    value={postFormat}
-                    onValueChange={(value: "POST" | "REEL") => {
-                      setPostFormat(value);
-                      // If switching to REEL and no video, show warning
-                      if (value === "REEL" && !mediaFiles.some(f => f.type === "video")) {
-                        // Will be validated on submit
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select format" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="POST">Post</SelectItem>
-                      <SelectItem value="REEL">Reel/Shorts</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-zinc-500">
-                    {postFormat === "REEL" 
-                      ? "Reels (Facebook/Instagram) and Shorts (YouTube) require a single vertical video (9:16, 15-90 seconds)"
-                      : "Regular posts can include text, images, or videos"}
-                  </p>
-                  {postFormat === "REEL" && mediaFiles.length > 0 && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
-                      {mediaFiles.some(f => f.type === "video") 
-                        ? "✓ Video detected. Make sure it's vertical (9:16) and 15-90 seconds."
-                        : "⚠ Reels/Shorts require a video file. Please upload a video in the Media tab."}
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Content Input */}
               <div className="space-y-3">
