@@ -10,6 +10,8 @@ import {
   Download,
   Loader2,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import axios from "axios";
 
@@ -22,6 +24,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { VideoThumbnail } from "@/components/media/VideoThumbnail";
 
 type MediaItem = {
   key: string;
@@ -56,6 +59,8 @@ function formatDate(date: Date | string): string {
   });
 }
 
+const ITEMS_PER_PAGE = 20;
+
 export default function MediaPage() {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +69,7 @@ export default function MediaPage() {
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<MediaItem | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
 
@@ -152,7 +158,15 @@ export default function MediaPage() {
       await axios.delete("/api/media", {
         data: { key: item.key },
       });
-      setMedia(media.filter((m) => m.key !== item.key));
+      const newMedia = media.filter((m) => m.key !== item.key);
+      setMedia(newMedia);
+      
+      // Adjust page if current page becomes empty
+      const newTotalPages = Math.ceil(newMedia.length / ITEMS_PER_PAGE);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
+      
       setDeleteItem(null);
     } catch (err) {
       console.error("Delete error:", err);
@@ -209,6 +223,22 @@ export default function MediaPage() {
     if (item.url.match(/\.(mp4|mov|quicktime)$/i)) return "video";
     return "image";
   };
+
+  // Pagination logic
+  const totalPages = Math.ceil(media.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedMedia = media.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Reset to page 1 when media changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [media.length]);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -292,83 +322,150 @@ export default function MediaPage() {
           <p>No media files yet. Upload your first file to get started.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {media.map((item) => {
-            const mediaType = getMediaType(item);
-            return (
-              <div
-                key={item.key}
-                className="group relative aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                onClick={() => setPreviewItem(item)}
-              >
-                {mediaType === "image" ? (
-                  <img
-                    src={item.url}
-                    alt="Media"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-black/50">
-                    <Video className="h-12 w-12 text-white" />
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {paginatedMedia.map((item) => {
+              const mediaType = getMediaType(item);
+              return (
+                <div
+                  key={item.key}
+                  className="group relative aspect-square bg-muted rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                  onClick={() => setPreviewItem(item)}
+                >
+                  {mediaType === "image" ? (
+                    <img
+                      src={item.url}
+                      alt="Media"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <VideoThumbnail
+                      src={item.url}
+                      className="w-full h-full"
+                      alt="Video thumbnail"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(item.url, "_blank");
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteItem(item);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(item.url, "_blank");
-                    }}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteItem(item);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p className="text-xs text-white truncate">
+                      {formatFileSize(item.size)}
+                    </p>
+                  </div>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-xs text-white truncate">
-                    {formatFileSize(item.size)}
-                  </p>
-                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  if (
+                    page === 1 ||
+                    page === totalPages ||
+                    (page >= currentPage - 1 && page <= currentPage + 1)
+                  ) {
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                        className="min-w-[2.5rem]"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  } else if (
+                    page === currentPage - 2 ||
+                    page === currentPage + 2
+                  ) {
+                    return (
+                      <span key={page} className="px-2 text-muted-foreground">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                })}
               </div>
-            );
-          })}
-        </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Page info */}
+          {media.length > 0 && (
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              Showing {startIndex + 1} - {Math.min(endIndex, media.length)} of {media.length} files
+            </div>
+          )}
+        </>
       )}
 
       {/* Preview Dialog */}
       <Dialog open={!!previewItem} onOpenChange={() => setPreviewItem(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Media Preview</DialogTitle>
           </DialogHeader>
           {previewItem && (
-            <div className="space-y-4">
-              {getMediaType(previewItem) === "image" ? (
-                <img
-                  src={previewItem.url}
-                  alt="Preview"
-                  className="w-full rounded-lg"
-                />
-              ) : (
-                <video
-                  src={previewItem.url}
-                  controls
-                  className="w-full rounded-lg"
-                />
-              )}
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-4">
+            <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+              <div className="flex items-center justify-center bg-muted rounded-lg overflow-hidden">
+                {getMediaType(previewItem) === "image" ? (
+                  <img
+                    src={previewItem.url}
+                    alt="Preview"
+                    className="max-w-full max-h-[70vh] w-auto h-auto object-contain rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={previewItem.url}
+                    controls
+                    className="max-w-full max-h-[70vh] w-auto h-auto object-contain rounded-lg"
+                  />
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm text-muted-foreground flex-shrink-0 pt-2 border-t">
+                <div className="flex flex-wrap items-center gap-4">
                   <span>Size: {formatFileSize(previewItem.size)}</span>
                   <span>Uploaded: {formatDate(previewItem.lastModified)}</span>
                 </div>
