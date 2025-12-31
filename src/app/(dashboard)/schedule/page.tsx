@@ -83,6 +83,11 @@ const PLATFORM_COLORS: Record<Platform, { bg: string; text: string; border: stri
     text: "text-emerald-700 dark:text-emerald-300",
     border: "border-emerald-200 dark:border-emerald-800",
   },
+  YOUTUBE: {
+    bg: "bg-red-50 dark:bg-red-950/20",
+    text: "text-red-700 dark:text-red-300",
+    border: "border-red-200 dark:border-red-800",
+  },
 };
 
 export default function SchedulePage() {
@@ -285,7 +290,7 @@ export default function SchedulePage() {
               Platform
             </label>
             <div className="flex flex-wrap gap-2">
-              {(["FACEBOOK", "INSTAGRAM", "TWITTER", "TIKTOK"] as Platform[]).map((platform) => (
+              {(["FACEBOOK", "INSTAGRAM", "TWITTER", "TIKTOK", "YOUTUBE"] as Platform[]).map((platform) => (
                 <button
                   key={platform}
                   onClick={() => togglePlatform(platform)}
