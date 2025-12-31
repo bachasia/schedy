@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, Image as ImageIcon, Video, AlertCircle } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Video, AlertCircle, FolderOpen } from "lucide-react";
 import axios from "axios";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MediaLibraryModal } from "./MediaLibraryModal";
 
 type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 
@@ -50,6 +51,7 @@ export function MediaUpload({
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [libraryModalOpen, setLibraryModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounter = useRef(0);
 
@@ -270,6 +272,27 @@ export function MediaUpload({
   const canAddImages = imageCount < limits.maxImages;
   const canAddVideos = videoCount < limits.maxVideos;
 
+  const handleSelectFromLibrary = (mediaItems: Array<{ url: string; contentType?: string }>) => {
+    const newMediaFiles: MediaFile[] = mediaItems.map((item) => {
+      const isVideo = item.contentType === "video" || item.url.match(/\.(mp4|mov|quicktime)$/i);
+      return {
+        id: `${Date.now()}-${item.url}`,
+        file: new File([], ""), // Empty file, we already have URL
+        preview: item.url,
+        type: isVideo ? "video" : "image",
+        url: item.url,
+        uploading: false,
+        progress: 100,
+      };
+    });
+
+    const updatedFiles = [...mediaFiles, ...newMediaFiles];
+    setMediaFiles(updatedFiles);
+    onMediaChange(updatedFiles);
+  };
+
+  const selectedMediaUrls = mediaFiles.map(f => f.url || f.preview).filter(Boolean) as string[];
+
   return (
     <div className="space-y-4">
       {/* Upload Area */}
@@ -309,11 +332,20 @@ export function MediaUpload({
               or{" "}
               <button
                 type="button"
+                onClick={() => setLibraryModalOpen(true)}
+                className="font-medium text-zinc-900 underline dark:text-zinc-50"
+                disabled={!canAddImages && !canAddVideos}
+              >
+                browse from library
+              </button>
+              {" or "}
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="font-medium text-zinc-900 underline dark:text-zinc-50"
                 disabled={!canAddImages && !canAddVideos}
               >
-                browse
+                upload new
               </button>
             </p>
           </div>
@@ -416,6 +448,18 @@ export function MediaUpload({
           {videoCount > 0 && <span>{videoCount} video(s)</span>}
         </div>
       )}
+
+      {/* Media Library Modal */}
+      <MediaLibraryModal
+        open={libraryModalOpen}
+        onOpenChange={setLibraryModalOpen}
+        onSelectMedia={handleSelectFromLibrary}
+        selectedMediaUrls={selectedMediaUrls}
+        maxImages={limits.maxImages}
+        maxVideos={limits.maxVideos}
+        currentImageCount={imageCount}
+        currentVideoCount={videoCount}
+      />
     </div>
   );
 }
