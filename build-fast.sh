@@ -15,12 +15,12 @@ export DOCKER_BUILDKIT=1
 export BUILDKIT_PROGRESS=plain
 
 # Build with cache mounts and parallel builds
-# Set NODE_OPTIONS to 256MB for VPS with 2GB RAM - heap out of memory fix
+# Set NODE_OPTIONS to 512MB for VPS with 4GB RAM (can be reduced if needed)
 docker build \
   --tag "$TAG" \
   --cache-from "$TAG" \
   --build-arg BUILDKIT_INLINE_CACHE=1 \
-  --build-arg NODE_OPTIONS="--max-old-space-size=256" \
+  --build-arg NODE_OPTIONS="--max-old-space-size=512" \
   --progress=plain \
   .
 

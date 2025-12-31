@@ -121,8 +121,8 @@ set_memory_limits() {
     
     # Set build memory limit (use 50% of available, max 2GB)
     if [ "$TOTAL_MEM" -lt 2048 ]; then
-        BUILD_MEM_LIMIT="256m"
-        echo -e "${YELLOW}Low memory VPS detected. Using 256MB limit${NC}"
+        BUILD_MEM_LIMIT="512m"
+        echo -e "${YELLOW}Low memory VPS detected. Using 512MB limit${NC}"
     elif [ "$TOTAL_MEM" -lt 4096 ]; then
         BUILD_MEM_LIMIT="1g"
         echo -e "${YELLOW}Medium memory VPS. Using 1GB limit${NC}"
@@ -169,12 +169,13 @@ build_staged() {
     # Stage 3: Builder (most memory intensive)
     echo -e "${YELLOW}Stage 3/4: Building application (this may take a while)...${NC}"
     echo -e "${YELLOW}⚠️  This stage uses the most memory. Please be patient...${NC}"
-    # Set Node.js memory limit via environment (256MB for VPS 2GB RAM - heap out of memory fix)
-    export NODE_OPTIONS="--max-old-space-size=256"
+    # Set Node.js memory limit via environment (512MB for VPS 4GB RAM)
+    # Can be reduced to 384MB or 256MB if still having issues
+    export NODE_OPTIONS="--max-old-space-size=512"
     docker build \
         --target builder \
         --tag schedy-builder:latest \
-        --build-arg NODE_OPTIONS="--max-old-space-size=256" \
+        --build-arg NODE_OPTIONS="--max-old-space-size=512" \
         --progress=plain \
         . || {
         echo -e "${RED}❌ Stage 3 failed!${NC}"
@@ -209,13 +210,14 @@ build_normal() {
     export DOCKER_BUILDKIT=1
     export BUILDKIT_PROGRESS=plain
     
-    # Set Node.js memory limit (256MB for VPS 2GB RAM - heap out of memory fix)
-    export NODE_OPTIONS="--max-old-space-size=256"
+    # Set Node.js memory limit (512MB for VPS 4GB RAM)
+    # Can be reduced to 384MB or 256MB if still having issues
+    export NODE_OPTIONS="--max-old-space-size=512"
     
     BUILD_ARGS=(
         --tag "$TAG"
         --build-arg BUILDKIT_INLINE_CACHE=1
-        --build-arg NODE_OPTIONS="--max-old-space-size=256"
+        --build-arg NODE_OPTIONS="--max-old-space-size=512"
         --progress=plain
     )
     
