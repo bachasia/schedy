@@ -30,17 +30,28 @@ export async function GET() {
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = generateCodeChallenge(codeVerifier);
 
+    // Calculate expiration time (10 minutes from now)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    // Delete any existing OAuthState for this user/platform to avoid accumulation
+    await prisma.oAuthState.deleteMany({
+      where: {
+        userId: session.user.id,
+        platform: "YOUTUBE",
+      },
+    });
+
     // Store state and code verifier temporarily
-    await prisma.$executeRaw`
-      INSERT OR REPLACE INTO OAuthState (userId, state, codeVerifier, platform, expiresAt)
-      VALUES (
-        ${session.user.id},
-        ${state},
-        ${codeVerifier},
-        'YOUTUBE',
-        datetime('now', '+10 minutes')
-      )
-    `;
+    await prisma.oAuthState.create({
+      data: {
+        userId: session.user.id,
+        state: state,
+        codeVerifier: codeVerifier,
+        platform: "YOUTUBE",
+        expiresAt: expiresAt,
+      },
+    });
 
     // Generate YouTube OAuth URL
     const authUrl = generateYouTubeAuthUrl(state, codeChallenge);
