@@ -3,7 +3,7 @@
  * R2 is S3-compatible, so we use AWS SDK
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 // Initialize R2 client
 function getR2Client() {
@@ -99,4 +99,91 @@ export function generateR2Key(userId: string, filename: string): string {
 
   // Structure: uploads/[userId]/[filename]
   return `uploads/${userId}/${sanitizedFilename}`;
+}
+
+/**
+ * List all media files for a user from R2
+ * @param userId - User ID
+ * @returns Array of media objects with URL, key, size, and last modified date
+ */
+export async function listUserMedia(userId: string): Promise<Array<{
+  key: string;
+  url: string;
+  size: number;
+  lastModified: Date;
+  contentType?: string;
+}>> {
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const publicUrl = process.env.R2_PUBLIC_URL;
+
+  if (!bucketName) {
+    throw new Error("R2_BUCKET_NAME environment variable is not set");
+  }
+
+  if (!publicUrl) {
+    throw new Error("R2_PUBLIC_URL environment variable is not set");
+  }
+
+  const client = getR2Client();
+  const prefix = `uploads/${userId}/`;
+
+  try {
+    const command = new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+    });
+
+    const response = await client.send(command);
+    const baseUrl = publicUrl.endsWith("/") ? publicUrl.slice(0, -1) : publicUrl;
+
+    if (!response.Contents || response.Contents.length === 0) {
+      return [];
+    }
+
+    return response.Contents.map((object) => {
+      const key = object.Key || "";
+      const cleanKey = key.startsWith("/") ? key.slice(1) : key;
+      const url = `${baseUrl}/${cleanKey}`;
+
+      return {
+        key: key,
+        url: url,
+        size: object.Size || 0,
+        lastModified: object.LastModified || new Date(),
+        contentType: object.Key?.endsWith(".mp4") || object.Key?.endsWith(".mov")
+          ? "video"
+          : "image",
+      };
+    }).sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime()); // Sort by newest first
+  } catch (error) {
+    console.error("[R2] List error:", error);
+    throw new Error(`Failed to list media from R2: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+}
+
+/**
+ * Delete a media file from R2
+ * @param key - Object key (path) in R2 bucket
+ */
+export async function deleteFromR2(key: string): Promise<void> {
+  const bucketName = process.env.R2_BUCKET_NAME;
+
+  if (!bucketName) {
+    throw new Error("R2_BUCKET_NAME environment variable is not set");
+  }
+
+  const client = getR2Client();
+
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    await client.send(command);
+    console.log(`[R2] Successfully deleted file from bucket: ${bucketName}, key: ${key}`);
+  } catch (error) {
+    console.error("[R2] Delete error:", error);
+    throw new Error(`Failed to delete file from R2: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
 }

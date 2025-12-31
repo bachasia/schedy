@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   CalendarClock,
+  Image as ImageIcon,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/profiles", label: "Profiles", icon: UserCircle2 },
   { href: "/posts", label: "Posts", icon: PenSquare },
   { href: "/schedule", label: "Schedule", icon: CalendarClock },
+  { href: "/media", label: "Media", icon: ImageIcon },
   { href: "/admin/queue", label: "Queue", icon: Activity },
 ];
 
