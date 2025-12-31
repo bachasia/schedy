@@ -9,7 +9,7 @@
     "redis:check": "node scripts/start-redis.js",
     "redis:docker": "node scripts/start-redis-docker.js",
     "redis:stop": "docker stop schedy-redis 2>/dev/null || echo 'Redis container not running'",
-    "build": "next build --webpack",
+    "build": "GENERATE_SOURCEMAP=false next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint . --fix",

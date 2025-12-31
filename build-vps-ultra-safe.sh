@@ -105,7 +105,7 @@ build_with_timeout() {
         if timeout $STAGE_TIMEOUT docker build \
             --target "$target" \
             --tag "$tag" \
-            --build-arg NODE_OPTIONS="--max-old-space-size=384" \
+            --build-arg NODE_OPTIONS="--max-old-space-size=256" \
             --progress=plain \
             "${build_args[@]}" \
             . 2>&1 | tee /tmp/build-${stage_name}-${attempt}.log; then
@@ -141,7 +141,7 @@ main() {
     
     export DOCKER_BUILDKIT=1
     export BUILDKIT_PROGRESS=plain
-    export NODE_OPTIONS="--max-old-space-size=384"
+    export NODE_OPTIONS="--max-old-space-size=256"
     
     # Stage 1: Dependencies
     echo ""

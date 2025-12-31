@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone", // Required for Docker deployment
   
+  // Disable source maps in production to save memory
+  productionBrowserSourceMaps: false,
+  
   // Optimize build performance and reduce memory usage
   experimental: {
     optimizePackageImports: [
@@ -42,11 +45,16 @@ const nextConfig: NextConfig = {
       config.optimization = {
         ...config.optimization,
         moduleIds: 'deterministic',
-        minimize: true,
+        minimize: process.env.NODE_ENV === 'production',
         // Reduce parallel processing to save memory
         usedExports: true,
         sideEffects: false,
       };
+      
+      // Disable source maps to save memory
+      if (process.env.NODE_ENV === 'production') {
+        config.devtool = false;
+      }
     }
     
     // Reduce parallel processing to prevent memory issues
