@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone", // Required for Docker deployment
   
-  // Optimize build performance
+  // Optimize build performance and reduce memory usage
   experimental: {
     optimizePackageImports: [
       'lucide-react',
@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-tabs',
       'date-fns',
     ],
+    // Disable webpack build workers to reduce memory usage (important for VPS 2GB RAM)
+    webpackBuildWorker: false,
   },
   
   // Mark Bull and related packages as external (server-only)

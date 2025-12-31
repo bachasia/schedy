@@ -164,12 +164,12 @@ build_staged() {
     
     # Stage 3: Builder (most memory intensive)
     echo -e "${YELLOW}Stage 3/4: Building application (this may take a while)...${NC}"
-    # Set Node.js memory limit via environment
-    export NODE_OPTIONS="--max-old-space-size=1024"
+    # Set Node.js memory limit via environment (512MB for VPS 2GB RAM)
+    export NODE_OPTIONS="--max-old-space-size=512"
     docker build \
         --target builder \
         --tag schedy-builder:latest \
-        --build-arg NODE_OPTIONS="--max-old-space-size=1024" \
+        --build-arg NODE_OPTIONS="--max-old-space-size=512" \
         . || {
         echo -e "${RED}❌ Stage 3 failed!${NC}"
         exit 1
@@ -196,13 +196,13 @@ build_normal() {
     export DOCKER_BUILDKIT=1
     export BUILDKIT_PROGRESS=plain
     
-    # Set Node.js memory limit
-    export NODE_OPTIONS="--max-old-space-size=1024"
+    # Set Node.js memory limit (512MB for VPS 2GB RAM)
+    export NODE_OPTIONS="--max-old-space-size=512"
     
     BUILD_ARGS=(
         --tag "$TAG"
         --build-arg BUILDKIT_INLINE_CACHE=1
-        --build-arg NODE_OPTIONS="--max-old-space-size=1024"
+        --build-arg NODE_OPTIONS="--max-old-space-size=512"
         --progress=plain
     )
     
