@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
     const session = await auth();
 
     if (!session?.user?.id) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      const baseUrl = getBaseUrl(request);
+      return NextResponse.redirect(new URL("/login", baseUrl));
     }
 
     // Get OAuth parameters from URL
@@ -28,10 +29,13 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get("state");
     const error = searchParams.get("error");
 
+    // Get base URL for redirects
+    const baseUrl = getBaseUrl(request);
+
     // Check for OAuth errors
     if (error) {
       console.error(`[YouTube] OAuth error: ${error}`);
-      const errorUrl = new URL("/profiles", request.url);
+      const errorUrl = new URL("/profiles", baseUrl);
       errorUrl.searchParams.set("error", `YouTube authorization failed: ${error}`);
       return NextResponse.redirect(errorUrl);
     }
@@ -39,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Validate required parameters
     if (!code || !state) {
       console.error("[YouTube] Missing code or state parameter");
-      const errorUrl = new URL("/profiles", request.url);
+      const errorUrl = new URL("/profiles", baseUrl);
       errorUrl.searchParams.set("error", "Invalid YouTube callback parameters");
       return NextResponse.redirect(errorUrl);
     }
@@ -63,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     if (!storedState || storedState.length === 0) {
       console.error("[YouTube] Invalid or expired state parameter");
-      const errorUrl = new URL("/profiles", request.url);
+      const errorUrl = new URL("/profiles", baseUrl);
       errorUrl.searchParams.set("error", "Invalid or expired YouTube authorization state");
       return NextResponse.redirect(errorUrl);
     }
@@ -160,13 +164,13 @@ export async function GET(request: NextRequest) {
     console.log(`[YouTube] Profile connected successfully: ${platformUsername}`);
 
     // Redirect to profiles page with success message
-    const baseUrl = getBaseUrl(request);
     const successUrl = new URL("/profiles", baseUrl);
     successUrl.searchParams.set("success", `YouTube account ${platformUsername} connected successfully!`);
     return NextResponse.redirect(successUrl);
   } catch (error: any) {
     console.error("[YouTube] Error in OAuth callback:", error);
     
+    // Get base URL for error redirect
     const baseUrl = getBaseUrl(request);
     const errorUrl = new URL("/profiles", baseUrl);
     errorUrl.searchParams.set(

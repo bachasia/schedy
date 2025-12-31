@@ -11,12 +11,30 @@ export function getBaseUrl(request: NextRequest): string {
     return process.env.NEXTAUTH_URL;
   }
   
+  // Try to get host from headers (for reverse proxy/load balancer)
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const host = request.headers.get("host");
+  
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  
+  if (host) {
+    const protocol = request.headers.get("x-forwarded-proto") || 
+                     (request.url.startsWith("https") ? "https" : "http");
+    return `${protocol}://${host}`;
+  }
+  
   // Fallback to request URL, but extract proper hostname
   const url = new URL(request.url);
+  
   // Replace 0.0.0.0 with localhost for local development
   if (url.hostname === "0.0.0.0") {
     url.hostname = "localhost";
   }
+  
+  // Return origin which includes protocol, hostname, and port
   return url.origin;
 }
 
