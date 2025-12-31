@@ -33,11 +33,12 @@ const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/mov"];
 
-const PLATFORM_LIMITS = {
+const PLATFORM_LIMITS: Record<Platform, { maxImages: number; maxVideos: number; maxImageDimension: number }> = {
   FACEBOOK: { maxImages: 10, maxVideos: 1, maxImageDimension: 8000 },
   INSTAGRAM: { maxImages: 10, maxVideos: 1, maxImageDimension: 8000 },
   TWITTER: { maxImages: 4, maxVideos: 1, maxImageDimension: 4096 },
   TIKTOK: { maxImages: 0, maxVideos: 1, maxImageDimension: 0 },
+  YOUTUBE: { maxImages: 0, maxVideos: 1, maxImageDimension: 0 },
 };
 
 export function MediaUpload({

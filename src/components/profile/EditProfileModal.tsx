@@ -48,6 +48,7 @@ const PLATFORM_LABELS: Record<Platform, string> = {
   INSTAGRAM: "Instagram",
   TIKTOK: "TikTok",
   TWITTER: "Twitter",
+  YOUTUBE: "YouTube",
 };
 
 export function EditProfileModal({
