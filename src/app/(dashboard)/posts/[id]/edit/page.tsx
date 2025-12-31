@@ -15,6 +15,7 @@ import {
   Instagram,
   Twitter,
   Video,
+  Play,
   AlertCircle,
 } from "lucide-react";
 import axios from "axios";
@@ -58,6 +59,7 @@ const PLATFORM_LIMITS: Record<Platform, number> = {
   INSTAGRAM: 2200,
   TWITTER: 280,
   TIKTOK: 2200,
+  YOUTUBE: 5000,
 };
 
 const PLATFORM_INFO: Record<
@@ -72,6 +74,7 @@ const PLATFORM_INFO: Record<
   INSTAGRAM: { name: "Instagram", icon: Instagram, color: "text-pink-500" },
   TWITTER: { name: "Twitter", icon: Twitter, color: "text-sky-500" },
   TIKTOK: { name: "TikTok", icon: Video, color: "text-emerald-500" },
+  YOUTUBE: { name: "YouTube", icon: Play, color: "text-red-600" },
 };
 
 const postSchema = z.object({
