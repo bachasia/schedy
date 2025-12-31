@@ -116,7 +116,13 @@ export async function GET(request: NextRequest) {
 
     // Use channel ID as platformUserId, or fallback to Google user ID
     const platformUserId = channelInfo?.id || userInfo.id;
-    const platformUsername = channelInfo?.snippet?.customUrl || channelInfo?.snippet?.title || userInfo.name;
+    
+    // Get username and remove @ symbol if present (UI will add it back)
+    let platformUsername = channelInfo?.snippet?.customUrl || channelInfo?.snippet?.title || userInfo.name;
+    if (platformUsername && platformUsername.startsWith("@")) {
+      platformUsername = platformUsername.substring(1);
+    }
+    
     const profileName = channelInfo?.snippet?.title || userInfo.name;
 
     // Store or update profile in database
