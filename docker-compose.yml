@@ -25,7 +25,7 @@ services:
       # Enable BuildKit for faster builds
       args:
         BUILDKIT_INLINE_CACHE: 1
-        NODE_OPTIONS: "--max-old-space-size=512"  # Reduced for VPS 2GB RAM
+        NODE_OPTIONS: "--max-old-space-size=384"  # Reduced for VPS 2GB RAM to prevent hanging
       # Use BuildKit cache
       cache_from:
         - schedy:latest

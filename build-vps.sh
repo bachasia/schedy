@@ -80,11 +80,11 @@ if [ "$USE_CACHE" = "false" ]; then
 fi
 
 # Build arguments
-# Set NODE_OPTIONS to 512MB for VPS with 2GB RAM
+# Set NODE_OPTIONS to 384MB for VPS with 2GB RAM to prevent hanging
 BUILD_ARGS=(
     --tag "$TAG"
     --build-arg BUILDKIT_INLINE_CACHE=1
-    --build-arg NODE_OPTIONS="--max-old-space-size=512"
+    --build-arg NODE_OPTIONS="--max-old-space-size=384"
     --progress=plain
 )
 

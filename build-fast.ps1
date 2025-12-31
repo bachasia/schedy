@@ -14,12 +14,12 @@ $env:DOCKER_BUILDKIT = "1"
 $env:BUILDKIT_PROGRESS = "plain"
 
 # Build with cache mounts and parallel builds
-# Set NODE_OPTIONS to 512MB for VPS with 2GB RAM
+# Set NODE_OPTIONS to 384MB for VPS with 2GB RAM to prevent hanging
 docker build `
   --tag $Tag `
   --cache-from $Tag `
   --build-arg BUILDKIT_INLINE_CACHE=1 `
-  --build-arg NODE_OPTIONS="--max-old-space-size=512" `
+  --build-arg NODE_OPTIONS="--max-old-space-size=384" `
   --progress=plain `
   .
 

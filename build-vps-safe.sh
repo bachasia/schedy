@@ -121,8 +121,8 @@ set_memory_limits() {
     
     # Set build memory limit (use 50% of available, max 2GB)
     if [ "$TOTAL_MEM" -lt 2048 ]; then
-        BUILD_MEM_LIMIT="512m"
-        echo -e "${YELLOW}Low memory VPS detected. Using 512MB limit${NC}"
+        BUILD_MEM_LIMIT="384m"
+        echo -e "${YELLOW}Low memory VPS detected. Using 384MB limit${NC}"
     elif [ "$TOTAL_MEM" -lt 4096 ]; then
         BUILD_MEM_LIMIT="1g"
         echo -e "${YELLOW}Medium memory VPS. Using 1GB limit${NC}"
@@ -162,18 +162,31 @@ build_staged() {
         exit 1
     }
     
+    # Cleanup before builder stage to free memory
+    echo -e "${YELLOW}Cleaning up before builder stage...${NC}"
+    docker system prune -f || true
+    
     # Stage 3: Builder (most memory intensive)
     echo -e "${YELLOW}Stage 3/4: Building application (this may take a while)...${NC}"
-    # Set Node.js memory limit via environment (512MB for VPS 2GB RAM)
-    export NODE_OPTIONS="--max-old-space-size=512"
+    echo -e "${YELLOW}⚠️  This stage uses the most memory. Please be patient...${NC}"
+    # Set Node.js memory limit via environment (384MB for VPS 2GB RAM to prevent hanging)
+    export NODE_OPTIONS="--max-old-space-size=384"
     docker build \
         --target builder \
         --tag schedy-builder:latest \
-        --build-arg NODE_OPTIONS="--max-old-space-size=512" \
+        --build-arg NODE_OPTIONS="--max-old-space-size=384" \
+        --progress=plain \
         . || {
         echo -e "${RED}❌ Stage 3 failed!${NC}"
+        echo -e "${YELLOW}This usually means out of memory. Try:${NC}"
+        echo -e "${YELLOW}  1. Increase swap: sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile${NC}"
+        echo -e "${YELLOW}  2. Free more memory: docker system prune -a -f${NC}"
         exit 1
     }
+    
+    # Cleanup after builder to free memory immediately
+    echo -e "${YELLOW}Cleaning up after builder stage...${NC}"
+    docker system prune -f || true
     
     # Stage 4: Final image
     echo -e "${YELLOW}Stage 4/4: Creating final image...${NC}"
@@ -196,13 +209,13 @@ build_normal() {
     export DOCKER_BUILDKIT=1
     export BUILDKIT_PROGRESS=plain
     
-    # Set Node.js memory limit (512MB for VPS 2GB RAM)
-    export NODE_OPTIONS="--max-old-space-size=512"
+    # Set Node.js memory limit (384MB for VPS 2GB RAM to prevent hanging)
+    export NODE_OPTIONS="--max-old-space-size=384"
     
     BUILD_ARGS=(
         --tag "$TAG"
         --build-arg BUILDKIT_INLINE_CACHE=1
-        --build-arg NODE_OPTIONS="--max-old-space-size=512"
+        --build-arg NODE_OPTIONS="--max-old-space-size=384"
         --progress=plain
     )
     

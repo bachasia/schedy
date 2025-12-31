@@ -48,9 +48,16 @@ ENV NEXT_PRIVATE_SKIP_TURBO=1
 
 # Build Next.js with cache mount for faster rebuilds
 # NODE_OPTIONS will be set via build arg to allow override
-# Reduced to 512MB for VPS with 2GB RAM
-ARG NODE_OPTIONS="--max-old-space-size=512"
+# Reduced to 384MB for VPS with 2GB RAM to prevent hanging
+ARG NODE_OPTIONS="--max-old-space-size=384"
 ENV NODE_OPTIONS=${NODE_OPTIONS}
+# Additional environment variables to reduce memory usage
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PRIVATE_SKIP_TURBO=1
+ENV CI=true
+# Reduce webpack memory usage
+ENV WEBPACK_MEMORY_LIMIT=256
 RUN --mount=type=cache,target=/app/.next/cache \
     npm run build
 

@@ -38,13 +38,19 @@ const nextConfig: NextConfig = {
         express: "commonjs express",
       });
       
-      // Optimize webpack for faster builds
+      // Optimize webpack for low memory builds
       config.optimization = {
         ...config.optimization,
         moduleIds: 'deterministic',
         minimize: true,
+        // Reduce parallel processing to save memory
+        usedExports: true,
+        sideEffects: false,
       };
     }
+    
+    // Reduce parallel processing to prevent memory issues
+    config.parallelism = 1; // Disable parallel processing
     
     // Speed up builds by reducing file system calls
     config.cache = {
@@ -52,6 +58,8 @@ const nextConfig: NextConfig = {
       buildDependencies: {
         config: [__filename],
       },
+      // Reduce cache memory usage
+      maxMemoryGenerations: 1,
     };
     
     return config;
