@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER";
+type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 
 interface Profile {
   id: string;

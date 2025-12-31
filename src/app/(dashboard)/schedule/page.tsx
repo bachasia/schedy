@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./calendar.css";
 
-type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER";
+type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 type PostStatus = "DRAFT" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED";
 
 interface Profile {

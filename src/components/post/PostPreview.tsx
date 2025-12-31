@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER";
+type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 
 interface MediaFile {
   id: string;
@@ -40,6 +40,7 @@ const PLATFORM_COLORS = {
   INSTAGRAM: "bg-gradient-to-tr from-purple-600 via-pink-600 to-orange-500",
   TWITTER: "bg-sky-500",
   TIKTOK: "bg-black",
+  YOUTUBE: "bg-red-600",
 };
 
 export function PostPreview({

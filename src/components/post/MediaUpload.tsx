@@ -7,7 +7,7 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER";
+type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 
 interface MediaFile {
   id: string;

@@ -16,6 +16,7 @@ import {
   Instagram,
   Twitter,
   Video,
+  Play,
   ExternalLink,
   Image as ImageIcon,
 } from "lucide-react";
@@ -24,7 +25,7 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER";
+type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 type PostStatus = "DRAFT" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED";
 
 interface Post {
@@ -89,6 +90,7 @@ const PLATFORM_INFO: Record<Platform, { name: string; icon: React.ComponentType<
   INSTAGRAM: { name: "Instagram", icon: Instagram, color: "text-pink-500" },
   TWITTER: { name: "Twitter", icon: Twitter, color: "text-sky-500" },
   TIKTOK: { name: "TikTok", icon: Video, color: "text-emerald-500" },
+  YOUTUBE: { name: "YouTube", icon: Play, color: "text-red-600" },
 };
 
 // Generate social media post URL

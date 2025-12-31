@@ -28,7 +28,7 @@ import { PostPreview } from "@/components/post/PostPreview";
 import { ScheduleForm } from "@/components/post/ScheduleForm";
 import { cn } from "@/lib/utils";
 
-type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER";
+type Platform = "FACEBOOK" | "INSTAGRAM" | "TIKTOK" | "TWITTER" | "YOUTUBE";
 
 interface Profile {
   id: string;
