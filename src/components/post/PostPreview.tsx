@@ -6,6 +6,7 @@ import {
   Instagram,
   Twitter,
   Video,
+  Play,
   Heart,
   MessageCircle,
   Share2,
@@ -132,7 +133,9 @@ export function PostPreview({
                 ? Instagram
                 : platform === "TWITTER"
                   ? Twitter
-                  : Video;
+                  : platform === "YOUTUBE"
+                    ? Play
+                    : Video;
           return (
             <TabsTrigger key={platform} value={platform} className="flex items-center gap-2">
               <Icon className="h-4 w-4" />
@@ -143,7 +146,9 @@ export function PostPreview({
                     ? "Instagram"
                     : platform === "TWITTER"
                       ? "Twitter"
-                      : "TikTok"}
+                      : platform === "YOUTUBE"
+                        ? "YouTube"
+                        : "TikTok"}
               </span>
             </TabsTrigger>
           );
@@ -443,6 +448,93 @@ export function PostPreview({
                     <Share2 className="h-6 w-6 text-white" />
                   </div>
                   <span className="text-xs text-white">0</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      )}
+
+      {/* YouTube Preview */}
+      {uniquePlatforms.includes("YOUTUBE") && (
+        <TabsContent value="YOUTUBE" className="mt-4">
+          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+            {/* Video Container */}
+            <div className="relative aspect-video bg-black">
+              {hasVideo ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+                      <Play className="h-10 w-10 text-white" />
+                    </div>
+                    <span className="text-sm text-white/80">Video Preview</span>
+                  </div>
+                </div>
+              ) : firstImage ? (
+                <img
+                  src={firstImage.preview}
+                  alt="Post media"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+                      <Play className="h-10 w-10 text-white" />
+                    </div>
+                    <span className="text-sm text-white/80">No media</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Video Info */}
+            <div className="p-4">
+              {/* Channel Info */}
+              <div className="mb-3 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-white">
+                  <Play className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-zinc-900 dark:text-zinc-50">
+                    {profileName}
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    @{profileUsername} · 0 views · just now
+                  </div>
+                </div>
+              </div>
+
+              {/* Title/Content */}
+              {content && (
+                <div className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                  {content.length > 100 ? `${content.substring(0, 100)}...` : content}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center gap-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+                <button className="flex flex-col items-center gap-1">
+                  <ThumbsUp className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+                  <span className="text-xs text-zinc-600 dark:text-zinc-400">0</span>
+                </button>
+                <button className="flex flex-col items-center gap-1">
+                  <ThumbsUp className="h-5 w-5 rotate-180 text-zinc-600 dark:text-zinc-400" />
+                  <span className="text-xs text-zinc-600 dark:text-zinc-400">0</span>
+                </button>
+                <button className="flex flex-col items-center gap-1">
+                  <MessageCircle className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+                  <span className="text-xs text-zinc-600 dark:text-zinc-400">0</span>
+                </button>
+                <button className="flex flex-col items-center gap-1">
+                  <Share2 className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+                  <span className="text-xs text-zinc-600 dark:text-zinc-400">Share</span>
+                </button>
+                <button className="ml-auto">
+                  <Bookmark className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
+                </button>
+                <button>
+                  <MoreHorizontal className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
                 </button>
               </div>
             </div>

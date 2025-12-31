@@ -238,6 +238,153 @@ export async function refreshYouTubeToken(refreshToken: string): Promise<YouTube
  * @param mediaUrls - Comma-separated media URLs (video file)
  * @param title - Video title (optional, defaults to content preview)
  */
+/**
+ * Download video file from URL
+ */
+async function downloadVideo(videoUrl: string): Promise<Buffer> {
+  console.log(`[YouTube] Downloading video from: ${videoUrl}`);
+  const response = await fetch(videoUrl);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to download video: ${response.statusText}`);
+  }
+  
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+/**
+ * Initialize resumable upload session
+ */
+async function initializeResumableUpload(
+  accessToken: string,
+  videoMetadata: {
+    title: string;
+    description: string;
+    tags?: string[];
+    categoryId?: string;
+    privacyStatus?: "public" | "private" | "unlisted";
+  }
+): Promise<string> {
+  const metadata = {
+    snippet: {
+      title: videoMetadata.title,
+      description: videoMetadata.description,
+      tags: videoMetadata.tags || [],
+      categoryId: videoMetadata.categoryId || "22", // People & Blogs
+    },
+    status: {
+      privacyStatus: videoMetadata.privacyStatus || "public",
+      selfDeclaredMadeForKids: false,
+    },
+  };
+
+  const response = await fetch(
+    `${YOUTUBE_API_URL}/videos?uploadType=resumable&part=snippet,status`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Upload-Content-Type": "video/*",
+      },
+      body: JSON.stringify(metadata),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to initialize upload: ${error}`);
+  }
+
+  const uploadUrl = response.headers.get("Location");
+  if (!uploadUrl) {
+    throw new Error("No upload URL returned from YouTube");
+  }
+
+  return uploadUrl;
+}
+
+/**
+ * Upload video using resumable upload protocol
+ * Returns the final response which contains the video ID
+ */
+async function uploadVideoResumable(
+  uploadUrl: string,
+  videoBuffer: Buffer
+): Promise<Response> {
+  const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+  const totalSize = videoBuffer.length;
+  let uploadedBytes = 0;
+  let finalResponse: Response | null = null;
+
+  while (uploadedBytes < totalSize) {
+    const chunkEnd = Math.min(uploadedBytes + chunkSize, totalSize);
+    const chunk = videoBuffer.slice(uploadedBytes, chunkEnd);
+
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Length": chunk.length.toString(),
+        "Content-Range": `bytes ${uploadedBytes}-${chunkEnd - 1}/${totalSize}`,
+      },
+      body: chunk,
+    });
+
+    if (response.status === 308) {
+      // Resume upload - get next byte position from Range header
+      const rangeHeader = response.headers.get("Range");
+      if (rangeHeader) {
+        const match = rangeHeader.match(/bytes=0-(\d+)/);
+        if (match) {
+          uploadedBytes = parseInt(match[1]) + 1;
+        } else {
+          uploadedBytes = chunkEnd;
+        }
+      } else {
+        uploadedBytes = chunkEnd;
+      }
+      console.log(`[YouTube] Upload progress: ${uploadedBytes}/${totalSize} bytes (${Math.round((uploadedBytes / totalSize) * 100)}%)`);
+    } else if (response.ok) {
+      // Upload complete - save the final response
+      finalResponse = response;
+      console.log(`[YouTube] Upload completed: ${totalSize} bytes`);
+      break;
+    } else {
+      const error = await response.text();
+      throw new Error(`Upload failed: ${error}`);
+    }
+  }
+
+  if (!finalResponse) {
+    throw new Error("Upload did not complete successfully");
+  }
+
+  return finalResponse;
+}
+
+/**
+ * Get uploaded video ID from upload response
+ * After successful upload, YouTube returns the video resource in the response body
+ */
+async function getVideoIdFromUploadResponse(
+  uploadResponse: Response
+): Promise<string> {
+  if (!uploadResponse.ok) {
+    const error = await uploadResponse.text();
+    throw new Error(`Upload failed: ${error}`);
+  }
+
+  const data = await uploadResponse.json();
+  
+  if (data.id) {
+    return data.id;
+  }
+
+  throw new Error("Video ID not found in upload response");
+}
+
+
 export async function publishToYouTube(
   profileId: string,
   postId: string,
@@ -279,28 +426,38 @@ export async function publishToYouTube(
     // Generate video title from content if not provided
     const videoTitle = title || content.substring(0, 100) || "Untitled Video";
 
-    // Note: Actual video upload requires:
-    // 1. Resumable upload initialization
-    // 2. Uploading video file in chunks
-    // 3. Finalizing upload
-    // This is a simplified version - in production, you'd need to implement
-    // the full resumable upload protocol
-
-    console.log(`[YouTube] Video upload would be initiated for: ${videoUrl}`);
+    console.log(`[YouTube] Starting video upload for: ${videoUrl}`);
     console.log(`[YouTube] Title: ${videoTitle}`);
     console.log(`[YouTube] Description: ${content.substring(0, 200)}...`);
 
-    // Placeholder: Return fake video ID
-    // In production, implement actual YouTube Data API v3 upload
-    const fakeVideoId = `youtube_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    
-    console.log(`[YouTube] Video uploaded successfully: ${fakeVideoId}`);
+    // Step 1: Download video file
+    console.log(`[YouTube] Step 1: Downloading video file...`);
+    const videoBuffer = await downloadVideo(videoUrl);
+    console.log(`[YouTube] Video downloaded: ${videoBuffer.length} bytes`);
+
+    // Step 2: Initialize resumable upload
+    console.log(`[YouTube] Step 2: Initializing resumable upload...`);
+    const uploadUrl = await initializeResumableUpload(profile.accessToken, {
+      title: videoTitle,
+      description: content,
+      privacyStatus: "public",
+    });
+    console.log(`[YouTube] Upload URL obtained: ${uploadUrl.substring(0, 100)}...`);
+
+    // Step 3: Upload video in chunks
+    console.log(`[YouTube] Step 3: Uploading video in chunks...`);
+    const uploadResponse = await uploadVideoResumable(uploadUrl, videoBuffer);
+
+    // Step 4: Get video ID from response
+    console.log(`[YouTube] Step 4: Getting video ID from response...`);
+    const videoId = await getVideoIdFromUploadResponse(uploadResponse);
+    console.log(`[YouTube] Video uploaded successfully. Video ID: ${videoId}`);
 
     // Generate video URL
-    const videoUrl_youtube = `https://www.youtube.com/watch?v=${fakeVideoId}`;
+    const videoUrl_youtube = `https://www.youtube.com/watch?v=${videoId}`;
 
     return {
-      platformPostId: fakeVideoId,
+      platformPostId: videoId,
       metadata: {
         platform: "youtube",
         publishedAt: new Date().toISOString(),
