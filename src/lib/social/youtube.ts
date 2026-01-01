@@ -337,9 +337,18 @@ async function initializeResumableUpload(
     // Try to extract more detailed error information
     if (errorData?.error?.errors) {
       errorData.error.errors.forEach((err: any, idx: number) => {
-        console.error(`[YouTube] Error ${idx + 1}:`, err);
+        console.error(`[YouTube] Error ${idx + 1}:`, {
+          message: err.message,
+          domain: err.domain,
+          reason: err.reason,
+          location: err.location,
+          locationType: err.locationType
+        });
       });
     }
+
+    // Log the exact metadata that was sent for debugging
+    console.error(`[YouTube] Metadata sent:`, JSON.stringify(cleanMetadata, null, 2));
 
     throw new Error(`Failed to initialize upload: ${errorText}`);
   }
@@ -453,6 +462,24 @@ export async function publishToYouTube(
 
   if (!profile?.accessToken) {
     throw new Error(`Profile ${profileId} has no access token`);
+  }
+
+  // Verify user has a YouTube channel
+  try {
+    const channelInfo = await getYouTubeChannelInfo(profile.accessToken);
+    if (!channelInfo) {
+      throw new Error(
+        `No YouTube channel found for this account. ` +
+        `Please create a YouTube channel at https://www.youtube.com/create_channel before uploading videos.`
+      );
+    }
+    console.log(`[YouTube] Channel verified: ${channelInfo.snippet.title}`);
+  } catch (error) {
+    console.error(`[YouTube] Failed to verify channel:`, error);
+    throw new Error(
+      `Failed to verify YouTube channel. ` +
+      `Please ensure you have a YouTube channel created and the access token has the required permissions.`
+    );
   }
 
   try {
