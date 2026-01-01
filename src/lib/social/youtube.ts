@@ -313,7 +313,7 @@ async function initializeResumableUpload(
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/json; charset=UTF-8",
         "X-Upload-Content-Type": "video/*",
         "X-Upload-Content-Length": contentLength.toString(),
       },
@@ -533,12 +533,17 @@ export async function publishToYouTube(
 
     // Step 2: Initialize resumable upload with content length
     console.log(`[YouTube] Step 2: Initializing resumable upload...`);
+
+    // IMPORTANT: For unverified API projects (created after July 28, 2020),
+    // YouTube restricts all uploads to private viewing mode regardless of what you set.
+    // Using "unlisted" as default instead of "public" to avoid potential API rejection.
+    // To upload public videos, the API project must undergo YouTube's compliance audit.
     const uploadUrl = await initializeResumableUpload(
       profile.accessToken,
       {
         title: videoTitle,
         description: videoDescription,
-        privacyStatus: "public",
+        privacyStatus: "unlisted", // Changed from "public" due to unverified API restrictions
       },
       videoBuffer.length
     );
