@@ -56,12 +56,12 @@ try {
   socialPostsQueue.on("error", (error: any) => {
     // Suppress errors during build time
     const isBuildTime = process.env.NEXT_PHASE === "phase-production-build";
-    
+
     if (isBuildTime) {
       // Silently ignore during build - Redis is not available
       return;
     }
-    
+
     // In runtime, only log if it's a connection error and Redis might not be ready yet
     // Don't spam logs if Redis is temporarily unavailable
     if (error?.code === "ECONNREFUSED") {
@@ -74,7 +74,7 @@ try {
       }
       return;
     }
-    
+
     // Log other errors
     console.error("[Queue] Queue error:", error);
   });
@@ -84,8 +84,8 @@ try {
   console.warn("[Queue] Queue initialization skipped (OK during build)");
   socialPostsQueue = {
     add: () => Promise.resolve({ id: "dummy" } as any),
-    process: () => {},
-    on: () => {},
+    process: () => { },
+    on: () => { },
     getJob: () => Promise.resolve(null),
     remove: () => Promise.resolve(true),
     getJobs: () => Promise.resolve([]),
@@ -105,7 +105,7 @@ socialPostsQueue.process(async (job) => {
   // Log retry attempts
   const attemptNumber = job.attemptsMade + 1;
   const maxAttempts = job.opts.attempts || 3;
-  
+
   console.log(
     `[Queue] Processing post ${postId} for user ${userId} (attempt ${attemptNumber}/${maxAttempts})`
   );
@@ -123,10 +123,10 @@ socialPostsQueue.process(async (job) => {
     if (!post) {
       // Post may have been deleted - mark job as completed to avoid retries
       console.warn(`[Queue] Post ${postId} not found - may have been deleted. Skipping.`);
-      return { 
-        success: false, 
-        skipped: true, 
-        reason: "Post not found (may have been deleted)" 
+      return {
+        success: false,
+        skipped: true,
+        reason: "Post not found (may have been deleted)"
       };
     }
 
@@ -185,7 +185,7 @@ socialPostsQueue.process(async (job) => {
     // 4. Check and refresh token if needed (pre-publish check)
     console.log(`[Queue] Checking token validity for profile ${profile.id}...`);
     const tokenValid = await ensureValidToken(profile.id);
-    
+
     if (!tokenValid) {
       throw new Error(
         `Token validation failed for profile ${profile.id}. ` +
@@ -225,7 +225,7 @@ socialPostsQueue.process(async (job) => {
     // Check if error is non-retryable (e.g., spam_risk, invalid token)
     const isNonRetryable = (error as any)?.isNonRetryable === true;
     const isLastAttempt = attemptNumber >= maxAttempts || isNonRetryable;
-    
+
     console.error(
       `[Queue] Failed to publish post ${postId} (attempt ${attemptNumber}/${maxAttempts}):`,
       errorMessage
@@ -240,13 +240,13 @@ socialPostsQueue.process(async (job) => {
     if (isLastAttempt) {
       // Final failure - update post status
       console.error(`[Queue] All retry attempts exhausted for post ${postId}`);
-      
+
       await prisma.post.update({
         where: { id: postId },
         data: {
           status: PostStatus.FAILED,
           failedAt: new Date(),
-          errorMessage: isNonRetryable 
+          errorMessage: isNonRetryable
             ? `${errorMessage} (non-retryable error)`
             : `${errorMessage} (after ${maxAttempts} attempts)`,
           updatedAt: new Date(),
@@ -256,11 +256,11 @@ socialPostsQueue.process(async (job) => {
       // Will retry - reset status to SCHEDULED so it can be retried
       const nextAttempt = attemptNumber + 1;
       const nextDelay = Math.pow(2, attemptNumber) * 2000; // Exponential backoff: 2s, 4s, 8s
-      
+
       console.log(
         `[Queue] Will retry post ${postId} in ${nextDelay}ms (attempt ${nextAttempt}/${maxAttempts})`
       );
-      
+
       await prisma.post.update({
         where: { id: postId },
         data: {
@@ -509,23 +509,36 @@ async function publishToYouTube(
 
   const videoUrl = mediaArray[0];
 
-  // For SHORT format, add "#Shorts" to the content if not already present
+  // For SHORT format, we'll add #Shorts to the title instead of description
+  // This is more reliable for YouTube Shorts detection
+  let videoTitle: string;
   let finalContent = content;
-  if (postFormat === "SHORT" && !content.includes("#Shorts") && !content.includes("#shorts")) {
-    finalContent = `${content} #Shorts`;
-    console.log(`[YouTube] Added #Shorts tag for SHORT format`);
+
+  if (postFormat === "SHORT") {
+    // Extract title from content (first line or first 100 chars)
+    const titleMatch = content.match(/^(.+?)(?:\n|$)/);
+    const baseTitle = titleMatch ? titleMatch[1].substring(0, 92) : content.substring(0, 92) || "Untitled";
+
+    // Add #Shorts to title if not already present
+    if (!baseTitle.includes("#Shorts") && !baseTitle.includes("#shorts")) {
+      videoTitle = `${baseTitle.trim()} #Shorts`;
+      console.log(`[YouTube] Added #Shorts tag to title for SHORT format`);
+    } else {
+      videoTitle = baseTitle.trim();
+    }
+  } else {
+    // For regular videos, extract title normally
+    const titleMatch = content.match(/^(.+?)(?:\n|$)/);
+    videoTitle = titleMatch ? titleMatch[1].substring(0, 100) : content.substring(0, 100) || "Untitled Video";
   }
 
-  // Extract title from content (first line or first 100 chars)
-  const titleMatch = finalContent.match(/^(.+?)(?:\n|$)/);
-  const videoTitle = titleMatch ? titleMatch[1].substring(0, 100) : finalContent.substring(0, 100) || "Untitled Video";
-
   // Call real YouTube API - pass mediaUrls as comma-separated string and title separately
-  const result = await publishToYouTubeAPI(profileId, postId, finalContent, videoUrl, videoTitle);
+  const result = await publishToYouTubeAPI(profileId, postId, finalContent, mediaUrls, videoTitle);
 
   console.log(`[YouTube] Successfully published to YouTube. Video ID: ${result.platformPostId}`);
 
   return result;
+
 }
 
 /**
@@ -786,7 +799,7 @@ socialPostsQueue.on("failed", (job, error) => {
     const attemptsMade = job.attemptsMade;
     const maxAttempts = job.opts.attempts || 3;
     const willRetry = attemptsMade < maxAttempts;
-    
+
     if (willRetry) {
       console.warn(
         `[Queue] Job ${job.id} failed (attempt ${attemptsMade}/${maxAttempts}), will retry:`,

@@ -244,11 +244,11 @@ export async function refreshYouTubeToken(refreshToken: string): Promise<YouTube
 async function downloadVideo(videoUrl: string): Promise<Buffer> {
   console.log(`[YouTube] Downloading video from: ${videoUrl}`);
   const response = await fetch(videoUrl);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to download video: ${response.statusText}`);
   }
-  
+
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
@@ -329,18 +329,18 @@ async function initializeResumableUpload(
     } catch {
       errorData = errorText;
     }
-    
+
     console.error(`[YouTube] Upload initialization failed:`);
     console.error(`[YouTube] Status: ${response.status} ${response.statusText}`);
     console.error(`[YouTube] Error response:`, errorData);
-    
+
     // Try to extract more detailed error information
     if (errorData?.error?.errors) {
       errorData.error.errors.forEach((err: any, idx: number) => {
         console.error(`[YouTube] Error ${idx + 1}:`, err);
       });
     }
-    
+
     throw new Error(`Failed to initialize upload: ${errorText}`);
   }
 
@@ -423,7 +423,7 @@ async function getVideoIdFromUploadResponse(
   }
 
   const data = await uploadResponse.json();
-  
+
   if (data.id) {
     return data.id;
   }
@@ -458,7 +458,7 @@ export async function publishToYouTube(
   try {
     // Parse media URLs
     const mediaArray = mediaUrls ? mediaUrls.split(",").filter(Boolean) : [];
-    
+
     if (mediaArray.length === 0) {
       throw new Error("YouTube requires a video file to upload");
     }
@@ -488,9 +488,16 @@ export async function publishToYouTube(
       videoTitle = "Untitled Video";
     }
 
+    // Ensure description is not empty - YouTube API requires non-empty description
+    let videoDescription = content.trim();
+    if (!videoDescription) {
+      videoDescription = videoTitle; // Use title as description if content is empty
+      console.log(`[YouTube] Content is empty, using title as description`);
+    }
+
     console.log(`[YouTube] Starting video upload for: ${videoUrl}`);
     console.log(`[YouTube] Title: ${videoTitle} (${videoTitle.length} chars)`);
-    console.log(`[YouTube] Description: ${content.substring(0, 200)}... (${content.length} chars)`);
+    console.log(`[YouTube] Description: ${videoDescription.substring(0, 200)}... (${videoDescription.length} chars)`);
 
     // Step 1: Download video file
     console.log(`[YouTube] Step 1: Downloading video file...`);
@@ -503,7 +510,7 @@ export async function publishToYouTube(
       profile.accessToken,
       {
         title: videoTitle,
-        description: content,
+        description: videoDescription,
         privacyStatus: "public",
       },
       videoBuffer.length
