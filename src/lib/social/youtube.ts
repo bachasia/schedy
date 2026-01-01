@@ -264,7 +264,8 @@ async function initializeResumableUpload(
     tags?: string[];
     categoryId?: string;
     privacyStatus?: "public" | "private" | "unlisted";
-  }
+  },
+  contentLength: number
 ): Promise<string> {
   // YouTube limits: title max 100 chars, description max 5000 chars
   const title = videoMetadata.title.substring(0, 100).trim();
@@ -314,6 +315,7 @@ async function initializeResumableUpload(
         "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
         "X-Upload-Content-Type": "video/*",
+        "X-Upload-Content-Length": contentLength.toString(),
       },
       body: JSON.stringify(cleanMetadata),
     }
@@ -495,13 +497,17 @@ export async function publishToYouTube(
     const videoBuffer = await downloadVideo(videoUrl);
     console.log(`[YouTube] Video downloaded: ${videoBuffer.length} bytes`);
 
-    // Step 2: Initialize resumable upload
+    // Step 2: Initialize resumable upload with content length
     console.log(`[YouTube] Step 2: Initializing resumable upload...`);
-    const uploadUrl = await initializeResumableUpload(profile.accessToken, {
-      title: videoTitle,
-      description: content,
-      privacyStatus: "public",
-    });
+    const uploadUrl = await initializeResumableUpload(
+      profile.accessToken,
+      {
+        title: videoTitle,
+        description: content,
+        privacyStatus: "public",
+      },
+      videoBuffer.length
+    );
     console.log(`[YouTube] Upload URL obtained: ${uploadUrl.substring(0, 100)}...`);
 
     // Step 3: Upload video in chunks
