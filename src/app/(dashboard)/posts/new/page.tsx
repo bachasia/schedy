@@ -137,13 +137,13 @@ export default function NewPostPage() {
   const characterCount = content.length;
   const isOverLimit = characterCount > characterLimit;
 
-  // Check if media is required based on platform and post format
-  // TikTok always requires media
-  // Instagram only requires media for REEL format, not for POST format
-  const hasTikTok = selectedProfiles.some((p) => p.platform === "TIKTOK");
-  const hasInstagramReel = postFormat === "REEL" && selectedProfiles.some((p) => p.platform === "INSTAGRAM");
+  // Check if Instagram or TikTok requires media
+  // Instagram API does not support text-only posts for any format
+  const hasInstagramOrTikTok = selectedProfiles.some(
+    (p) => p.platform === "INSTAGRAM" || p.platform === "TIKTOK"
+  );
   const hasMedia = mediaFiles.length > 0 && mediaFiles.some((f) => f.url);
-  const mediaRequiredError = (hasTikTok || hasInstagramReel) && !hasMedia;
+  const mediaRequiredError = hasInstagramOrTikTok && !hasMedia;
 
   const handleProfileToggle = (profileId: string) => {
     const current = selectedProfileIds;
@@ -160,19 +160,14 @@ export default function NewPostPage() {
   const onSaveDraft = async (data: PostFormValues) => {
     setIsSaving(true);
     try {
-      // Check if media is required based on platform and post format
-      const hasTikTok = selectedProfiles.some((p) => p.platform === "TIKTOK");
-      const hasInstagramReel = postFormat === "REEL" && selectedProfiles.some((p) => p.platform === "INSTAGRAM");
+      // Check if Instagram or TikTok requires media
+      const hasInstagramOrTikTok = selectedProfiles.some(
+        (p) => p.platform === "INSTAGRAM" || p.platform === "TIKTOK"
+      );
       const hasMedia = mediaFiles.length > 0 && mediaFiles.some((f) => f.url);
 
-      if (hasTikTok && !hasMedia) {
-        alert("TikTok posts require at least one media file. Please upload an image or video.");
-        setIsSaving(false);
-        return;
-      }
-
-      if (hasInstagramReel && !hasMedia) {
-        alert("Instagram Reels require at least one video file. Please upload a video.");
+      if (hasInstagramOrTikTok && !hasMedia) {
+        alert("Instagram and TikTok posts require at least one media file. Please upload an image or video.");
         setIsSaving(false);
         return;
       }
@@ -392,7 +387,7 @@ export default function NewPostPage() {
             value="schedule"
             className="flex items-center gap-2"
             disabled={!content.trim() || selectedProfileIds.length === 0 || mediaRequiredError}
-            title={mediaRequiredError ? (postFormat === "REEL" ? "Instagram Reels require at least one video" : "TikTok requires at least one media file") : undefined}
+            title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
           >
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Schedule</span>
@@ -622,7 +617,7 @@ export default function NewPostPage() {
                   variant="outline"
                   onClick={handleSubmit(onSaveDraft)}
                   disabled={isSaving || !content.trim() || mediaRequiredError}
-                  title={mediaRequiredError ? (postFormat === "REEL" ? "Instagram Reels require at least one video" : "TikTok requires at least one media file") : undefined}
+                  title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
                 >
                   <Save className="mr-2 h-4 w-4" />
                   Save as Draft
@@ -671,9 +666,7 @@ export default function NewPostPage() {
                   <div>
                     <p className="font-medium">Media Required</p>
                     <p className="mt-1">
-                      {postFormat === "REEL"
-                        ? "Instagram Reels require at least one video file. Please upload a video before saving or scheduling."
-                        : "TikTok posts require at least one media file (image or video). Please upload media before saving or scheduling."}
+                      Instagram and TikTok posts require at least one media file (image or video). Please upload media before saving or scheduling.
                     </p>
                   </div>
                 </div>
@@ -695,7 +688,7 @@ export default function NewPostPage() {
               <Button
                 onClick={() => setActiveTab("schedule")}
                 disabled={mediaFiles.some(f => f.uploading) || mediaRequiredError}
-                title={mediaRequiredError ? (postFormat === "REEL" ? "Instagram Reels require at least one video" : "TikTok requires at least one media file") : undefined}
+                title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
               >
                 Continue to Schedule
                 <ArrowRight className="ml-2 h-4 w-4" />

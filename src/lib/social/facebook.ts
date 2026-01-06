@@ -253,7 +253,7 @@ export async function publishToFacebook(
   console.log(`[Facebook API] Content preview:`, contentPreview);
   console.log(`[Facebook API] Content length:`, content.length);
   console.log(`[Facebook API] Content has emojis:`, /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(content));
-  
+
   const postData: any = {
     message: content, // Content is sent as-is, JSON.stringify will handle UTF-8 encoding
     access_token: accessToken,
@@ -263,7 +263,7 @@ export async function publishToFacebook(
   console.log(`[Facebook API] Media URLs received:`, mediaUrls);
   console.log(`[Facebook API] Media count:`, mediaUrls?.length || 0);
   console.log(`[Facebook API] Post format:`, postFormat);
-  
+
   if (mediaUrls && mediaUrls.length > 0) {
     console.log(`[Facebook API] Processing media post with ${mediaUrls.length} file(s)`);
     if (mediaUrls.length === 1) {
@@ -281,7 +281,7 @@ export async function publishToFacebook(
           postData.file_url = mediaUrl;
           const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
             method: "POST",
-            headers: { 
+            headers: {
               "Content-Type": "application/json; charset=utf-8",
             },
             body: JSON.stringify(postData),
@@ -299,7 +299,7 @@ export async function publishToFacebook(
         postData.url = mediaUrl;
         const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/photos`, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json; charset=utf-8",
           },
           body: JSON.stringify(postData),
@@ -319,7 +319,7 @@ export async function publishToFacebook(
       for (const mediaUrl of mediaUrls) {
         const photoResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/photos`, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json; charset=utf-8",
           },
           body: JSON.stringify({
@@ -347,7 +347,7 @@ export async function publishToFacebook(
 
       const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/feed`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json; charset=utf-8",
         },
         body: JSON.stringify(albumData),
@@ -365,7 +365,7 @@ export async function publishToFacebook(
     console.log(`[Facebook API] Publishing text-only post to ${pageId}/feed`);
     const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/feed`, {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify(postData),
@@ -396,8 +396,13 @@ export async function publishToInstagram(
   mediaUrls?: string[],
   postFormat: "POST" | "REEL" = "POST",
 ): Promise<InstagramPublishResponse> {
+  // Instagram API requires media for all post types (POST and REEL)
+  // Text-only posts are not supported by Instagram Graph API
   if (!mediaUrls || mediaUrls.length === 0) {
-    throw new Error("Instagram posts require at least one media file");
+    throw new Error(
+      "Instagram posts require at least one media file. " +
+      "The Instagram API does not support text-only posts."
+    );
   }
 
   // Get profile with access token
@@ -431,6 +436,7 @@ export async function publishToInstagram(
   console.log(`[Instagram API] Content length:`, content.length);
   console.log(`[Instagram API] Content has emojis:`, /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(content));
   console.log(`[Instagram API] Post format received:`, postFormat);
+  console.log(`[Instagram API] Media URLs:`, mediaUrls);
 
   if (mediaUrls.length === 1) {
     // Single photo or video
@@ -453,21 +459,21 @@ export async function publishToInstagram(
         console.log(`[Instagram API] Publishing as regular video`);
       }
       containerData.video_url = mediaUrl;
-      
+
       // Validate video URL format
       if (!mediaUrl.startsWith("https://")) {
         throw new Error(`Instagram video URL must use HTTPS. Got: ${mediaUrl.substring(0, 50)}...`);
       }
-      
+
       // Validate video URL accessibility before creating container
       // This helps prevent errors when multiple accounts try to access the same URL simultaneously
       console.log(`[Instagram API] Validating video URL accessibility: ${mediaUrl}`);
       try {
-        const urlCheckResponse = await fetch(mediaUrl, { 
+        const urlCheckResponse = await fetch(mediaUrl, {
           method: "HEAD",
           signal: AbortSignal.timeout(10000), // 10 second timeout
         });
-        
+
         if (!urlCheckResponse.ok) {
           console.warn(`[Instagram API] Video URL returned status ${urlCheckResponse.status}, but continuing...`);
         } else {
@@ -478,7 +484,7 @@ export async function publishToInstagram(
         console.warn(`[Instagram API] Could not validate video URL accessibility: ${urlError.message}`);
         console.log(`[Instagram API] Continuing with container creation (URL may still be accessible from Facebook servers)`);
       }
-      
+
       console.log(`[Instagram API] Video URL: ${mediaUrl}`);
     } else {
       containerData.image_url = mediaUrl;
@@ -501,7 +507,7 @@ export async function publishToInstagram(
     // Retry logic for container creation (especially important for Reels with multiple accounts)
     const maxRetries = 3;
     let lastError: any = null;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         // Add small delay between retries to avoid rate limiting
@@ -513,7 +519,7 @@ export async function publishToInstagram(
 
         const containerResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json; charset=utf-8",
           },
           body: JSON.stringify(containerData),
@@ -523,11 +529,11 @@ export async function publishToInstagram(
           const container: InstagramContainerResponse = await containerResponse.json();
           const containerId = container.id;
           console.log(`[Instagram API] Created container ${containerId} on attempt ${attempt}, status: ${container.status_code || container.status}`);
-          
+
           // Continue with container processing
           // We'll need to handle the rest of the function differently
           // Let me check the rest of the code...
-          
+
           // Store container for later use
           (containerData as any).__containerId = containerId;
           (containerData as any).__container = container;
@@ -542,17 +548,17 @@ export async function publishToInstagram(
         } catch {
           error = { message: errorText };
         }
-        
+
         const errorCode = error.error?.code || error.code;
         const errorSubcode = error.error?.error_subcode;
-        
+
         // Check if this is a retryable error
-        const isRetryable = errorCode === 100 || 
-                           errorCode === 4 || // Rate limit
-                           errorCode === 17 || // User request limit
-                           containerResponse.status === 429 || // Too many requests
-                           containerResponse.status >= 500; // Server errors
-        
+        const isRetryable = errorCode === 100 ||
+          errorCode === 4 || // Rate limit
+          errorCode === 17 || // User request limit
+          containerResponse.status === 429 || // Too many requests
+          containerResponse.status >= 500; // Server errors
+
         if (!isRetryable || attempt === maxRetries) {
           // Non-retryable error or last attempt - throw error
           console.error(`[Instagram API] Container creation failed (attempt ${attempt}/${maxRetries}):`, {
@@ -561,10 +567,10 @@ export async function publishToInstagram(
             error: error,
             requestData: logData,
           });
-          
+
           // Extract detailed error message
           const errorMessage = error.error?.message || error.message || containerResponse.statusText;
-          
+
           let fullErrorMessage = `Failed to create Instagram container: ${errorMessage}`;
           if (errorCode) {
             fullErrorMessage += ` (code: ${errorCode})`;
@@ -572,7 +578,7 @@ export async function publishToInstagram(
           if (errorSubcode) {
             fullErrorMessage += ` (subcode: ${errorSubcode})`;
           }
-          
+
           // Add helpful hints for common errors
           if (errorCode === 100 || errorMessage?.toLowerCase().includes("invalid parameter")) {
             fullErrorMessage += `. Common causes: video URL not accessible, invalid video format, or missing required parameters.`;
@@ -580,10 +586,10 @@ export async function publishToInstagram(
               fullErrorMessage += ` This error often occurs when multiple accounts try to access the same video URL simultaneously. Try scheduling posts with a delay between accounts.`;
             }
           }
-          
+
           throw new Error(fullErrorMessage);
         }
-        
+
         // Retryable error - store and continue to next attempt
         lastError = error;
         console.warn(`[Instagram API] Container creation failed (attempt ${attempt}/${maxRetries}), will retry:`, {
@@ -592,7 +598,7 @@ export async function publishToInstagram(
           errorSubcode,
           message: error.error?.message || error.message,
         });
-        
+
       } catch (fetchError: any) {
         // Network or other errors
         if (attempt === maxRetries) {
@@ -602,12 +608,12 @@ export async function publishToInstagram(
         console.warn(`[Instagram API] Container creation error (attempt ${attempt}/${maxRetries}), will retry:`, fetchError.message);
       }
     }
-    
+
     // If we get here without a container, something went wrong
     if (!(containerData as any).__container) {
       throw new Error(`Failed to create Instagram container after ${maxRetries} attempts`);
     }
-    
+
     const container: InstagramContainerResponse = (containerData as any).__container;
     const containerId = (containerData as any).__containerId;
 
@@ -677,7 +683,7 @@ export async function publishToInstagram(
 
     const publishResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media_publish`, {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify(publishData),
@@ -725,7 +731,7 @@ export async function publishToInstagram(
 
       const itemResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json; charset=utf-8",
         },
         body: JSON.stringify(itemData),
@@ -790,7 +796,7 @@ export async function publishToInstagram(
 
     const carouselResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media`, {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify(carouselData),
@@ -861,7 +867,7 @@ export async function publishToInstagram(
 
     const publishResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${igAccountId}/media_publish`, {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify(publishData),
@@ -910,11 +916,11 @@ async function publishFacebookReel(
   description: string,
 ): Promise<FacebookPostResponse> {
   console.log(`[Facebook API] Publishing Reel to page ${pageId}`);
-  
+
   // Facebook Reels can be published using /videos endpoint with video_format_type parameter
   // Alternative: Use /video_reels endpoint with 3-phase upload (more complex, requires direct file upload)
   // For now, we'll use the simpler approach with video_format_type
-  
+
   // Log content for debugging
   const contentPreview = description.length > 100 ? description.substring(0, 100) + "..." : description;
   console.log(`[Facebook API] Reel description preview:`, contentPreview);
@@ -930,7 +936,7 @@ async function publishFacebookReel(
 
   const response = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
     method: "POST",
-    headers: { 
+    headers: {
       "Content-Type": "application/json; charset=utf-8",
     },
     body: JSON.stringify(reelData),
@@ -939,27 +945,27 @@ async function publishFacebookReel(
   if (!response.ok) {
     const error = await response.json();
     console.error(`[Facebook API] Reel publish failed:`, error);
-    
+
     // If video_format_type doesn't work, try without it (fallback to regular video)
     if (error.error?.code === 100 || error.error?.message?.includes("video_format_type")) {
       console.log(`[Facebook API] Falling back to regular video post`);
       reelData.video_format_type = undefined;
       const fallbackResponse = await fetch(`${FACEBOOK_GRAPH_URL}/${pageId}/videos`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json; charset=utf-8",
         },
         body: JSON.stringify(reelData),
       });
-      
+
       if (!fallbackResponse.ok) {
         const fallbackError = await fallbackResponse.json();
         throw new Error(`Failed to publish Reel: ${fallbackError.error?.message || fallbackResponse.statusText}`);
       }
-      
+
       return fallbackResponse.json();
     }
-    
+
     throw new Error(`Failed to publish Reel: ${error.error?.message || response.statusText}`);
   }
 

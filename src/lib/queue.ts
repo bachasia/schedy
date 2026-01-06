@@ -398,6 +398,7 @@ async function publishToInstagram(
   // Parse media URLs
   const mediaArray = mediaUrls ? mediaUrls.split(",").filter(Boolean) : [];
 
+  // Instagram API requires media for all post types (POST and REEL)
   if (mediaArray.length === 0) {
     throw new Error("Instagram posts require at least one media file");
   }
