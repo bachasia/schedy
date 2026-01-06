@@ -137,12 +137,13 @@ export default function NewPostPage() {
   const characterCount = content.length;
   const isOverLimit = characterCount > characterLimit;
 
-  // Check if Instagram or TikTok requires media
-  const hasInstagramOrTikTok = selectedProfiles.some(
-    (p) => p.platform === "INSTAGRAM" || p.platform === "TIKTOK"
-  );
+  // Check if media is required based on platform and post format
+  // TikTok always requires media
+  // Instagram only requires media for REEL format, not for POST format
+  const hasTikTok = selectedProfiles.some((p) => p.platform === "TIKTOK");
+  const hasInstagramReel = postFormat === "REEL" && selectedProfiles.some((p) => p.platform === "INSTAGRAM");
   const hasMedia = mediaFiles.length > 0 && mediaFiles.some((f) => f.url);
-  const mediaRequiredError = hasInstagramOrTikTok && !hasMedia;
+  const mediaRequiredError = (hasTikTok || hasInstagramReel) && !hasMedia;
 
   const handleProfileToggle = (profileId: string) => {
     const current = selectedProfileIds;
@@ -159,14 +160,19 @@ export default function NewPostPage() {
   const onSaveDraft = async (data: PostFormValues) => {
     setIsSaving(true);
     try {
-      // Check if Instagram or TikTok requires media
-      const hasInstagramOrTikTok = selectedProfiles.some(
-        (p) => p.platform === "INSTAGRAM" || p.platform === "TIKTOK"
-      );
+      // Check if media is required based on platform and post format
+      const hasTikTok = selectedProfiles.some((p) => p.platform === "TIKTOK");
+      const hasInstagramReel = postFormat === "REEL" && selectedProfiles.some((p) => p.platform === "INSTAGRAM");
       const hasMedia = mediaFiles.length > 0 && mediaFiles.some((f) => f.url);
-      
-      if (hasInstagramOrTikTok && !hasMedia) {
-        alert("Instagram and TikTok posts require at least one media file. Please upload an image or video.");
+
+      if (hasTikTok && !hasMedia) {
+        alert("TikTok posts require at least one media file. Please upload an image or video.");
+        setIsSaving(false);
+        return;
+      }
+
+      if (hasInstagramReel && !hasMedia) {
+        alert("Instagram Reels require at least one video file. Please upload a video.");
         setIsSaving(false);
         return;
       }
@@ -230,18 +236,18 @@ export default function NewPostPage() {
       router.push("/posts");
     } catch (error: any) {
       console.error("Failed to save draft:", error);
-      
+
       // Show detailed error message
       const errorMessage = error.response?.data?.error || error.message || "Failed to save draft";
       const errorDetails = error.response?.data?.details || "";
       const errorHint = error.response?.data?.hint || "";
-      
+
       const fullMessage = [
         errorMessage,
         errorDetails && `Details: ${errorDetails}`,
         errorHint && `Hint: ${errorHint}`
       ].filter(Boolean).join("\n");
-      
+
       alert(fullMessage);
     } finally {
       setIsSaving(false);
@@ -326,18 +332,18 @@ export default function NewPostPage() {
       router.push("/posts");
     } catch (error: any) {
       console.error("Failed to schedule post:", error);
-      
+
       // Show detailed error message
       const errorMessage = error.response?.data?.error || error.message || "Failed to schedule post";
       const errorDetails = error.response?.data?.details || "";
       const errorHint = error.response?.data?.hint || "";
-      
+
       const fullMessage = [
         errorMessage,
         errorDetails && `Details: ${errorDetails}`,
         errorHint && `Hint: ${errorHint}`
       ].filter(Boolean).join("\n");
-      
+
       alert(fullMessage);
     } finally {
       setIsSaving(false);
@@ -382,11 +388,11 @@ export default function NewPostPage() {
             <ImageIcon className="h-4 w-4" />
             <span className="hidden sm:inline">Media</span>
           </TabsTrigger>
-          <TabsTrigger 
-            value="schedule" 
-            className="flex items-center gap-2" 
+          <TabsTrigger
+            value="schedule"
+            className="flex items-center gap-2"
             disabled={!content.trim() || selectedProfileIds.length === 0 || mediaRequiredError}
-            title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
+            title={mediaRequiredError ? (postFormat === "REEL" ? "Instagram Reels require at least one video" : "TikTok requires at least one media file") : undefined}
           >
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Schedule</span>
@@ -408,17 +414,17 @@ export default function NewPostPage() {
                   onValueChange={(value: "POST" | "REEL") => {
                     setPostFormat(value);
                     // Clear selected profiles that don't match the new format
-                    const allowedPlatforms = value === "REEL" 
+                    const allowedPlatforms = value === "REEL"
                       ? ["FACEBOOK", "INSTAGRAM", "YOUTUBE"]
                       : ["FACEBOOK", "INSTAGRAM"];
-                    
+
                     const newSelectedIds = selectedProfileIds.filter(profileId => {
                       const profile = profiles.find(p => p.id === profileId);
                       return profile && allowedPlatforms.includes(profile.platform);
                     });
-                    
+
                     setValue("profileIds", newSelectedIds);
-                    
+
                     // If switching to REEL and no video, show warning
                     if (value === "REEL" && !mediaFiles.some(f => f.type === "video")) {
                       // Will be validated on submit
@@ -434,13 +440,13 @@ export default function NewPostPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-zinc-500">
-                  {postFormat === "REEL" 
+                  {postFormat === "REEL"
                     ? "Reels (Facebook/Instagram) and Shorts (YouTube) require a single vertical video (9:16, 15-90 seconds)"
                     : "Regular posts can include text, images, or videos"}
                 </p>
                 {postFormat === "REEL" && mediaFiles.length > 0 && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
-                    {mediaFiles.some(f => f.type === "video") 
+                    {mediaFiles.some(f => f.type === "video")
                       ? "✓ Video detected. Make sure it's vertical (9:16) and 15-90 seconds."
                       : "⚠ Reels/Shorts require a video file. Please upload a video in the Media tab."}
                   </div>
@@ -464,17 +470,17 @@ export default function NewPostPage() {
                   </div>
                 ) : (() => {
                   // Filter profiles based on post format
-                  const allowedPlatforms = postFormat === "REEL" 
+                  const allowedPlatforms = postFormat === "REEL"
                     ? ["FACEBOOK", "INSTAGRAM", "YOUTUBE"]
                     : ["FACEBOOK", "INSTAGRAM"];
-                  
+
                   const filteredProfiles = profiles.filter(p => allowedPlatforms.includes(p.platform));
-                  
+
                   if (filteredProfiles.length === 0) {
                     return (
                       <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 text-center dark:border-zinc-700 dark:bg-zinc-900">
                         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                          {postFormat === "REEL" 
+                          {postFormat === "REEL"
                             ? "No Facebook, Instagram, or YouTube profiles found."
                             : "No Facebook or Instagram profiles found."}
                         </p>
@@ -489,7 +495,7 @@ export default function NewPostPage() {
                       </div>
                     );
                   }
-                  
+
                   return (
                     <div className="space-y-2">
                       {filteredProfiles.map((profile) => {
@@ -616,7 +622,7 @@ export default function NewPostPage() {
                   variant="outline"
                   onClick={handleSubmit(onSaveDraft)}
                   disabled={isSaving || !content.trim() || mediaRequiredError}
-                  title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
+                  title={mediaRequiredError ? (postFormat === "REEL" ? "Instagram Reels require at least one video" : "TikTok requires at least one media file") : undefined}
                 >
                   <Save className="mr-2 h-4 w-4" />
                   Save as Draft
@@ -665,7 +671,9 @@ export default function NewPostPage() {
                   <div>
                     <p className="font-medium">Media Required</p>
                     <p className="mt-1">
-                      Instagram and TikTok posts require at least one media file (image or video). Please upload media before saving or scheduling.
+                      {postFormat === "REEL"
+                        ? "Instagram Reels require at least one video file. Please upload a video before saving or scheduling."
+                        : "TikTok posts require at least one media file (image or video). Please upload media before saving or scheduling."}
                     </p>
                   </div>
                 </div>
@@ -687,7 +695,7 @@ export default function NewPostPage() {
               <Button
                 onClick={() => setActiveTab("schedule")}
                 disabled={mediaFiles.some(f => f.uploading) || mediaRequiredError}
-                title={mediaRequiredError ? "Instagram and TikTok require at least one media file" : undefined}
+                title={mediaRequiredError ? (postFormat === "REEL" ? "Instagram Reels require at least one video" : "TikTok requires at least one media file") : undefined}
               >
                 Continue to Schedule
                 <ArrowRight className="ml-2 h-4 w-4" />
