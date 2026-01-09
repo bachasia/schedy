@@ -47,7 +47,13 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return NextResponse.json({ post });
+  // Parse mediaUrls from comma-separated string to array
+  const postData = {
+    ...post,
+    mediaUrls: post.mediaUrls ? post.mediaUrls.split(",").filter(Boolean) : [],
+  };
+
+  return NextResponse.json({ post: postData });
 }
 
 export async function PATCH(
