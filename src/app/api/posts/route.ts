@@ -39,13 +39,19 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ posts });
+  // Parse mediaUrls from comma-separated string to array for each post
+  const postsWithParsedMedia = posts.map(post => ({
+    ...post,
+    mediaUrls: post.mediaUrls ? post.mediaUrls.split(",").filter(Boolean) : [],
+  }));
+
+  return NextResponse.json({ posts: postsWithParsedMedia });
 }
 
 export async function POST(request: Request) {
   try {
     console.log("[API] POST /api/posts - Starting request");
-    
+
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -60,9 +66,9 @@ export async function POST(request: Request) {
 
     const json = await request.json();
     console.log("[API] POST /api/posts - Request body:", JSON.stringify(json, null, 2));
-    
+
     const parsed = createPostSchema.safeParse(json);
-    
+
     if (!parsed.success) {
       console.log("[API] POST /api/posts - Validation failed:", parsed.error.errors);
     }
@@ -89,11 +95,11 @@ export async function POST(request: Request) {
     // Verify all profiles belong to the user
     console.log("[API] POST /api/posts - Fetching profiles...");
     const profiles = await prisma.profile.findMany({
-    where: {
-      id: { in: profileIds },
-      userId: userId,
-    },
-  });
+      where: {
+        id: { in: profileIds },
+        userId: userId,
+      },
+    });
 
     if (profiles.length !== profileIds.length) {
       console.log("[API] POST /api/posts - Profile count mismatch:", profiles.length, "!=", profileIds.length);
@@ -113,107 +119,107 @@ export async function POST(request: Request) {
 
     // Create a post for each profile
     const posts = await Promise.all(
-    profiles.map((profile) => {
-      // Determine post format: SHORT for YouTube when original is REEL, otherwise use original format
-      let finalPostFormat = (postFormat || "POST") as "POST" | "REEL" | "SHORT" | "STORY";
-      
-      // If this is a YouTube profile and original format is REEL, use SHORT
-      if (profile.platform === "YOUTUBE" && isReel) {
-        finalPostFormat = "SHORT";
-        console.log(`[API] POST /api/posts - Converting REEL to SHORT for YouTube profile ${profile.id}`);
-      }
+      profiles.map((profile) => {
+        // Determine post format: SHORT for YouTube when original is REEL, otherwise use original format
+        let finalPostFormat = (postFormat || "POST") as "POST" | "REEL" | "SHORT" | "STORY";
 
-      const postData: any = {
-        userId: userId,
-        profileId: profile.id,
-        content,
-        mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls.join(",") : "", // Convert array to comma-separated string
-        platform: profile.platform,
-        postFormat: finalPostFormat,
-        status: status as PostStatus,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        groupId: groupId, // Assign same groupId to all posts in this batch
-      };
+        // If this is a YouTube profile and original format is REEL, use SHORT
+        if (profile.platform === "YOUTUBE" && isReel) {
+          finalPostFormat = "SHORT";
+          console.log(`[API] POST /api/posts - Converting REEL to SHORT for YouTube profile ${profile.id}`);
+        }
 
-      // Only set mediaType if there are media URLs
-      if (mediaUrls && mediaUrls.length > 0) {
-        postData.mediaType = mediaType || "IMAGE";
-      }
+        const postData: any = {
+          userId: userId,
+          profileId: profile.id,
+          content,
+          mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls.join(",") : "", // Convert array to comma-separated string
+          platform: profile.platform,
+          postFormat: finalPostFormat,
+          status: status as PostStatus,
+          scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+          groupId: groupId, // Assign same groupId to all posts in this batch
+        };
 
-      return prisma.post.create({
-        data: postData as Prisma.PostUncheckedCreateInput,
-        include: {
-          profile: {
-            select: {
-              id: true,
-              name: true,
-              platform: true,
-              platformUsername: true,
+        // Only set mediaType if there are media URLs
+        if (mediaUrls && mediaUrls.length > 0) {
+          postData.mediaType = mediaType || "IMAGE";
+        }
+
+        return prisma.post.create({
+          data: postData as Prisma.PostUncheckedCreateInput,
+          include: {
+            profile: {
+              select: {
+                id: true,
+                name: true,
+                platform: true,
+                platformUsername: true,
+              },
             },
           },
-        },
-      });
-    }),
-  );
+        });
+      }),
+    );
 
-  const validPosts = posts.filter((p) => p !== null);
+    const validPosts = posts.filter((p) => p !== null);
 
-  console.log("[API] POST /api/posts - Created", validPosts.length, "posts successfully");
+    console.log("[API] POST /api/posts - Created", validPosts.length, "posts successfully");
 
-  // Add posts to queue if scheduled or set to publish immediately
-  // Wrapped in try-catch to handle Redis/queue errors gracefully
-  console.log("[API] POST /api/posts - Adding posts to queue...");
-  let queueError = null;
-  
-  try {
-    for (const post of validPosts) {
-      if (post.status === "SCHEDULED" && post.scheduledAt) {
-        // Add to queue with delay
-        await addPostToQueue(post.id, userId, post.scheduledAt);
-        console.log(`[API] Added scheduled post ${post.id} to queue for ${post.scheduledAt}`);
-      } else if (post.status === "PUBLISHED") {
-        // Add to queue for immediate processing
-        await addPostToQueue(post.id, userId);
-        console.log(`[API] Added post ${post.id} to queue for immediate publishing`);
+    // Add posts to queue if scheduled or set to publish immediately
+    // Wrapped in try-catch to handle Redis/queue errors gracefully
+    console.log("[API] POST /api/posts - Adding posts to queue...");
+    let queueError = null;
+
+    try {
+      for (const post of validPosts) {
+        if (post.status === "SCHEDULED" && post.scheduledAt) {
+          // Add to queue with delay
+          await addPostToQueue(post.id, userId, post.scheduledAt);
+          console.log(`[API] Added scheduled post ${post.id} to queue for ${post.scheduledAt}`);
+        } else if (post.status === "PUBLISHED") {
+          // Add to queue for immediate processing
+          await addPostToQueue(post.id, userId);
+          console.log(`[API] Added post ${post.id} to queue for immediate publishing`);
+        }
+      }
+      console.log("[API] POST /api/posts - Successfully added all posts to queue");
+    } catch (error) {
+      // Log queue error but don't fail the post creation
+      queueError = error;
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("[API] Failed to add posts to queue:", errorMessage);
+      console.warn(
+        "[API] Posts were created successfully but not added to queue. " +
+        "Make sure Redis is running for queue functionality."
+      );
+
+      // If posts are PUBLISHED status but couldn't be queued, update to DRAFT so user can retry
+      if (validPosts.some(p => p.status === "PUBLISHED")) {
+        console.error(
+          "[API] WARNING: Posts with PUBLISHED status could not be queued. " +
+          "Updating status to DRAFT for manual retry."
+        );
+
+        // Update posts to DRAFT status
+        await Promise.all(
+          validPosts
+            .filter(p => p.status === "PUBLISHED")
+            .map(p =>
+              prisma.post.update({
+                where: { id: p.id },
+                data: {
+                  status: "DRAFT",
+                  errorMessage: "Failed to queue: " + errorMessage
+                }
+              })
+            )
+        );
       }
     }
-    console.log("[API] POST /api/posts - Successfully added all posts to queue");
-  } catch (error) {
-    // Log queue error but don't fail the post creation
-    queueError = error;
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("[API] Failed to add posts to queue:", errorMessage);
-    console.warn(
-      "[API] Posts were created successfully but not added to queue. " +
-      "Make sure Redis is running for queue functionality."
-    );
-    
-    // If posts are PUBLISHED status but couldn't be queued, update to DRAFT so user can retry
-    if (validPosts.some(p => p.status === "PUBLISHED")) {
-      console.error(
-        "[API] WARNING: Posts with PUBLISHED status could not be queued. " +
-        "Updating status to DRAFT for manual retry."
-      );
-      
-      // Update posts to DRAFT status
-      await Promise.all(
-        validPosts
-          .filter(p => p.status === "PUBLISHED")
-          .map(p => 
-            prisma.post.update({
-              where: { id: p.id },
-              data: { 
-                status: "DRAFT",
-                errorMessage: "Failed to queue: " + errorMessage 
-              }
-            })
-          )
-      );
-    }
-  }
 
     // Return response with queue status
-    return NextResponse.json({ 
+    return NextResponse.json({
       posts: validPosts,
       queueStatus: queueError ? {
         error: true,
@@ -227,13 +233,13 @@ export async function POST(request: Request) {
     }, { status: 201 });
   } catch (error) {
     console.error("Error creating posts:", error);
-    
+
     // Return detailed error message
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    
+
     return NextResponse.json(
-      { 
-        error: "Failed to create posts", 
+      {
+        error: "Failed to create posts",
         details: errorMessage,
         hint: errorMessage.includes("Redis") || errorMessage.includes("ECONNREFUSED")
           ? "Make sure Redis is running for queue functionality"

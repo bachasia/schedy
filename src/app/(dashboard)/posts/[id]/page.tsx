@@ -88,7 +88,7 @@ function getPostUrl(
         ? `https://www.instagram.com/reel/${shortcode}/`
         : `https://www.instagram.com/p/${shortcode}/`;
     case "TWITTER":
-      return username 
+      return username
         ? `https://twitter.com/${username}/status/${platformPostId}`
         : `https://twitter.com/i/web/status/${platformPostId}`;
     case "TIKTOK":
@@ -175,7 +175,10 @@ export default function PostDetailPage() {
 
   const StatusIcon = STATUS_INFO[post.status].icon;
   const PlatformIcon = PLATFORM_INFO[post.platform].icon;
-  const mediaUrls = post.mediaUrls ? post.mediaUrls.split(",").filter(Boolean) : [];
+  // Handle mediaUrls as either string (from database) or array (from API)
+  const mediaUrls = typeof post.mediaUrls === 'string'
+    ? (post.mediaUrls ? post.mediaUrls.split(",").filter(Boolean) : [])
+    : (post.mediaUrls || []);
   const mediaFiles = mediaUrls.map((url, idx) => ({
     id: `media-${idx}`,
     preview: url,

@@ -31,7 +31,7 @@ type PostStatus = "DRAFT" | "SCHEDULED" | "PUBLISHING" | "PUBLISHED" | "FAILED";
 interface Post {
   id: string;
   content: string;
-  mediaUrls?: string;
+  mediaUrls?: string | string[]; // Can be string (from DB) or array (from API)
   mediaType?: "IMAGE" | "VIDEO" | "CAROUSEL";
   status: PostStatus;
   platform: Platform;
@@ -55,7 +55,7 @@ interface Post {
 interface GroupedPost {
   id: string; // Use first post's ID or generate a group ID
   content: string;
-  mediaUrls: string;
+  mediaUrls: string | string[]; // Can be string (from DB) or array (from API)
   mediaType: "IMAGE" | "VIDEO" | "CAROUSEL" | undefined;
   postFormat: "POST" | "REEL" | "SHORT" | "STORY" | undefined;
   createdAt: string;
@@ -115,7 +115,7 @@ function getPostUrl(
         : `https://www.instagram.com/p/${shortcode}/`;
     case "TWITTER":
       // Twitter post URL format: https://twitter.com/{username}/status/{tweet-id}
-      return username 
+      return username
         ? `https://twitter.com/${username}/status/${platformPostId}`
         : `https://twitter.com/i/web/status/${platformPostId}`;
     case "TIKTOK":
@@ -142,7 +142,7 @@ export default function PostsPage() {
   // Group posts by groupId (or fallback to content+time for old posts without groupId)
   const groupedPosts = useMemo(() => {
     const groups = new Map<string, Post[]>();
-    
+
     posts.forEach((post) => {
       // Use groupId if available, otherwise fallback to content+time matching for backward compatibility
       let key: string;
@@ -154,18 +154,18 @@ export default function PostsPage() {
         const roundedTime = Math.floor(createdAt / 5000) * 5000; // Round to nearest 5 seconds
         key = `legacy_${post.content}|${post.mediaUrls || ""}|${roundedTime}`;
       }
-      
+
       if (!groups.has(key)) {
         groups.set(key, []);
       }
       groups.get(key)!.push(post);
     });
-    
+
     // Convert to GroupedPost format
     const grouped: GroupedPost[] = [];
     groups.forEach((postGroup) => {
       if (postGroup.length === 0) return;
-      
+
       const firstPost = postGroup[0];
       const platforms = postGroup.map((post) => ({
         platform: post.platform,
@@ -178,7 +178,7 @@ export default function PostsPage() {
         failedAt: post.failedAt,
         errorMessage: post.errorMessage,
       }));
-      
+
       grouped.push({
         id: firstPost.groupId || firstPost.id, // Use groupId if available, otherwise use first post's ID
         content: firstPost.content,
@@ -190,9 +190,9 @@ export default function PostsPage() {
         platforms,
       });
     });
-    
+
     // Sort by createdAt descending
-    return grouped.sort((a, b) => 
+    return grouped.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [posts]);
@@ -204,13 +204,13 @@ export default function PostsPage() {
         const hasPlatform = group.platforms.some((p) => p.platform === platformFilter);
         if (!hasPlatform) return false;
       }
-      
+
       // Filter by status if specified
       if (statusFilter !== "ALL") {
         const hasStatus = group.platforms.some((p) => p.status === statusFilter);
         if (!hasStatus) return false;
       }
-      
+
       return true;
     });
   }, [groupedPosts, statusFilter, platformFilter]);
@@ -240,12 +240,12 @@ export default function PostsPage() {
       console.error("Failed to delete post:", error);
     }
   };
-  
+
   const handleDeleteGroup = async (group: GroupedPost) => {
     if (!confirm(`Delete this post from all ${group.platforms.length} platform(s)?`)) {
       return;
     }
-    
+
     try {
       await Promise.all(group.platforms.map((p) => axios.delete(`/api/posts/${p.postId}`)));
       await fetchPosts(); // Refresh posts list
@@ -363,10 +363,13 @@ export default function PostsPage() {
       ) : (
         <div className="space-y-3">
           {filteredPosts.map((group) => {
-            const mediaUrls = group.mediaUrls ? group.mediaUrls.split(",").filter(Boolean) : [];
+            // Handle mediaUrls as either string (from database) or array (from API)
+            const mediaUrls = typeof group.mediaUrls === 'string'
+              ? (group.mediaUrls ? group.mediaUrls.split(",").filter(Boolean) : [])
+              : (group.mediaUrls || []);
             const firstMediaUrl = mediaUrls[0];
             const isVideo = group.mediaType === "VIDEO" || (firstMediaUrl && firstMediaUrl.includes("video"));
-            
+
             // Get overall status (show most important: FAILED > PUBLISHING > PUBLISHED > SCHEDULED > DRAFT)
             const getOverallStatus = (): PostStatus => {
               if (group.platforms.some((p) => p.status === "FAILED")) return "FAILED";
@@ -375,7 +378,7 @@ export default function PostsPage() {
               if (group.platforms.some((p) => p.status === "SCHEDULED")) return "SCHEDULED";
               return "DRAFT";
             };
-            
+
             const overallStatus = getOverallStatus();
             const StatusIcon = STATUS_INFO[overallStatus].icon;
 
@@ -442,7 +445,7 @@ export default function PostsPage() {
                         <StatusIcon className="h-3 w-3" />
                         {STATUS_INFO[overallStatus].label}
                       </span>
-                      
+
                       {/* Platform Icons with Status Badges */}
                       <div className="flex items-center gap-1.5">
                         {group.platforms.map((platform) => {
@@ -452,7 +455,7 @@ export default function PostsPage() {
                           const isPublishing = platform.status === "PUBLISHING";
                           const isScheduled = platform.status === "SCHEDULED";
                           const isPending = isPublishing || isScheduled;
-                          
+
                           return (
                             <button
                               key={platform.postId}
@@ -487,7 +490,7 @@ export default function PostsPage() {
                               title={`${PLATFORM_INFO[platform.platform].name}: ${STATUS_INFO[platform.status].label}${platform.errorMessage ? ` - ${platform.errorMessage}` : ""}${isScheduled && group.scheduledAt ? ` (${new Date(group.scheduledAt).toLocaleString()})` : ""}`}
                             >
                               <PlatformIcon className={cn("h-4 w-4", PLATFORM_INFO[platform.platform].color)} />
-                              
+
                               {/* Status Badge */}
                               {isPublished && (
                                 <div className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-green-500 ring-2 ring-white dark:ring-zinc-950">
