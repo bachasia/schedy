@@ -4,6 +4,7 @@
  */
 
 import { scheduleTokenRefreshJob } from "@/lib/cron/token-refresh-job";
+import { schedulePostsSyncJob } from "@/lib/cron/posts-sync-job";
 
 let initialized = false;
 
@@ -22,6 +23,9 @@ export function initializeApp(): void {
   try {
     // Schedule token refresh cron job
     scheduleTokenRefreshJob();
+
+    // Schedule posts sync cron job
+    schedulePostsSyncJob();
 
     // Mark as initialized
     initialized = true;
