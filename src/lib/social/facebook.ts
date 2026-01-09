@@ -450,14 +450,10 @@ export async function publishToInstagram(
     };
 
     if (isVideoPost) {
-      // Determine media type based on post format
-      if (postFormat === "REEL") {
-        containerData.media_type = "REELS";
-        console.log(`[Instagram API] Publishing as Reel`);
-      } else {
-        containerData.media_type = "VIDEO";
-        console.log(`[Instagram API] Publishing as regular video`);
-      }
+      // Instagram API deprecated VIDEO media type - all videos must use REELS
+      // See: https://developers.facebook.com/docs/instagram-api/reference/ig-user/media#creating
+      containerData.media_type = "REELS";
+      console.log(`[Instagram API] Publishing video as Reel (VIDEO media type is deprecated)`);
       containerData.video_url = mediaUrl;
 
       // Validate video URL format

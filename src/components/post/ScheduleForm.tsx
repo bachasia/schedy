@@ -31,6 +31,7 @@ interface ScheduleFormProps {
   onSchedule: (scheduledAt: Date | null) => void;
   onBack: () => void;
   isSubmitting?: boolean;
+  initialScheduledAt?: string | null;
 }
 
 const TIMEZONES = [
@@ -52,10 +53,26 @@ export function ScheduleForm({
   onSchedule,
   onBack,
   isSubmitting = false,
+  initialScheduledAt,
 }: ScheduleFormProps) {
-  const [scheduleType, setScheduleType] = useState<"now" | "later">("later");
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
+  // Initialize with existing scheduled time if editing
+  const [scheduleType, setScheduleType] = useState<"now" | "later">(() => {
+    return initialScheduledAt ? "later" : "later";
+  });
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (initialScheduledAt) {
+      const date = new Date(initialScheduledAt);
+      return format(date, "yyyy-MM-dd");
+    }
+    return "";
+  });
+  const [selectedTime, setSelectedTime] = useState(() => {
+    if (initialScheduledAt) {
+      const date = new Date(initialScheduledAt);
+      return format(date, "HH:mm");
+    }
+    return "";
+  });
   const [timezone, setTimezone] = useState(() => {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   });

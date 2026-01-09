@@ -46,6 +46,7 @@ interface Post {
   status: string;
   platform: Platform;
   profileId: string;
+  scheduledAt: string | null;
   profile: {
     id: string;
     name: string | null;
@@ -405,6 +406,7 @@ export default function EditPostPage() {
             onSchedule={onSchedulePost}
             onBack={() => setActiveTab("media")}
             isSubmitting={isSaving}
+            initialScheduledAt={post?.scheduledAt}
           />
         </TabsContent>
       </Tabs>
