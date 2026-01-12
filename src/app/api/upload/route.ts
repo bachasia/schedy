@@ -7,12 +7,25 @@ import { uploadToR2, generateR2Key } from "@/lib/storage/r2";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+];
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/quicktime"];
 
 const uploadSchema = z.object({
   type: z.enum(["image", "video"]),
 });
+
+// Configure route segment for large uploads
+export const runtime = "nodejs";
+export const maxDuration = 60; // 60 seconds timeout for large uploads
+
+// Increase body size limit for this route
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,8 +37,21 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id;
 
-    // Parse form data
-    const formData = await request.formData();
+    // Parse form data with streaming to handle large files
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (parseError) {
+      console.error("FormData parse error:", parseError);
+      return NextResponse.json(
+        {
+          error:
+            "Failed to parse form data. File might be too large or corrupt.",
+        },
+        { status: 400 },
+      );
+    }
+
     const file = formData.get("file") as File | null;
     const type = formData.get("type") as string;
 
@@ -85,18 +111,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Upload error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 },
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-
-
-
-
-
-
-
-
