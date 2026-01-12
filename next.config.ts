@@ -6,15 +6,19 @@ const nextConfig: NextConfig = {
   // Disable source maps in production to save memory
   productionBrowserSourceMaps: false,
 
+  // Increase body size limit for uploads (100MB for videos)
+  // @ts-ignore - this is a valid Next.js config option
+  middlewareClientMaxBodySize: "100mb",
+
   // Optimize build performance and reduce memory usage
   experimental: {
     optimizePackageImports: [
-      'lucide-react',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-select',
-      '@radix-ui/react-tabs',
-      'date-fns',
+      "lucide-react",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-select",
+      "@radix-ui/react-tabs",
+      "date-fns",
     ],
     // Disable webpack build workers to reduce memory usage (important for VPS 2GB RAM)
     webpackBuildWorker: false,
@@ -44,12 +48,12 @@ const nextConfig: NextConfig = {
       // Optimize webpack for low memory builds
       config.optimization = {
         ...config.optimization,
-        moduleIds: 'deterministic',
-        minimize: process.env.NODE_ENV === 'production',
+        moduleIds: "deterministic",
+        minimize: process.env.NODE_ENV === "production",
       };
 
       // Disable source maps to save memory
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === "production") {
         config.devtool = false;
       }
     }
@@ -59,7 +63,7 @@ const nextConfig: NextConfig = {
 
     // Speed up builds by reducing file system calls
     config.cache = {
-      type: 'filesystem',
+      type: "filesystem",
       buildDependencies: {
         config: [__filename],
       },
