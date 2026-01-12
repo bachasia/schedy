@@ -63,16 +63,27 @@ function LoginForm() {
     }
   };
 
+  // Check for account deactivated error
+  const accountDeactivated = searchParams.get("error") === "AccountDeactivated";
+
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Welcome back
+          Schedy Internal Portal
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Sign in to continue to your dashboard.
+          Sign in with your company credentials
         </p>
       </div>
+
+      {accountDeactivated && (
+        <div className="rounded-md bg-red-50 p-3 dark:bg-red-900/20">
+          <p className="text-sm text-red-800 dark:text-red-200">
+            Your account has been deactivated. Please contact your administrator.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1">
@@ -134,14 +145,8 @@ function LoginForm() {
         </button>
       </form>
 
-      <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-        Don&apos;t have an account?{" "}
-        <a
-          href="/register"
-          className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-100"
-        >
-          Register
-        </a>
+      <p className="text-center text-xs text-zinc-500 dark:text-zinc-500">
+        Internal use only. Contact your administrator for access.
       </p>
     </div>
   );

@@ -38,6 +38,11 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
+        // Check if user is active
+        if (!user.isActive) {
+          return null;
+        }
+
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
           return null;
@@ -56,12 +61,37 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user }) {
       if (user && "id" in user && typeof user.id === "string") {
         token.userId = user.id;
+
+        // Fetch user role and active status
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true, isActive: true },
+        });
+
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.isActive = dbUser.isActive;
+        }
       }
       return token;
     },
     async session({ session, token }) {
       if (token?.userId && session.user) {
-        (session.user as typeof session.user & { id: string }).id = token.userId as string;
+        (session.user as typeof session.user & {
+          id: string;
+          role: string;
+          isActive: boolean;
+        }).id = token.userId as string;
+        (session.user as typeof session.user & {
+          id: string;
+          role: string;
+          isActive: boolean;
+        }).role = token.role as string;
+        (session.user as typeof session.user & {
+          id: string;
+          role: string;
+          isActive: boolean;
+        }).isActive = token.isActive as boolean;
       }
       return session;
     },

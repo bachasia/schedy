@@ -12,6 +12,7 @@ import {
   Menu,
   PenSquare,
   UserCircle2,
+  Users,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -21,6 +22,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 interface SidebarProps {
   userName?: string | null;
+  userRole?: string;
 }
 
 const navItems = [
@@ -30,9 +32,10 @@ const navItems = [
   { href: "/posts", label: "Posts", icon: PenSquare },
   { href: "/schedule", label: "Schedule", icon: CalendarClock },
   { href: "/admin/queue", label: "Queue", icon: Activity },
+  { href: "/admin/users", label: "Users", icon: Users, adminOnly: true },
 ];
 
-export function Sidebar({ userName }: SidebarProps) {
+export function Sidebar({ userName, userRole }: SidebarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -40,6 +43,14 @@ export function Sidebar({ userName }: SidebarProps) {
     href === "/"
       ? pathname === "/"
       : pathname === href || pathname.startsWith(`${href}/`);
+
+  // Filter nav items based on user role
+  const filteredNavItems = navItems.filter(item => {
+    if (item.adminOnly) {
+      return userRole === 'ADMIN';
+    }
+    return true;
+  });
 
   return (
     <>
@@ -51,7 +62,7 @@ export function Sidebar({ userName }: SidebarProps) {
           </span>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (
@@ -106,7 +117,7 @@ export function Sidebar({ userName }: SidebarProps) {
       {open ? (
         <div className="border-b border-zinc-200 bg-white px-4 py-2 text-sm shadow-sm dark:border-zinc-800 dark:bg-zinc-950 md:hidden">
           <nav className="space-y-1">
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (

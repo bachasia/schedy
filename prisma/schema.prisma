@@ -32,6 +32,13 @@ enum PostFormat {
   STORY   // Story (temporary)
 }
 
+/// User role for internal access control
+enum Role {
+  ADMIN     // Full system access, user management
+  MANAGER   // Manage all posts and profiles
+  EMPLOYEE  // Manage own posts only
+}
+
 /// Lifecycle state of a post
 enum PostStatus {
   DRAFT
@@ -48,6 +55,9 @@ model User {
   password      String
   emailVerified DateTime?
   image         String?
+  role          Role      @default(EMPLOYEE)
+  isActive      Boolean   @default(true)
+  createdBy     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -56,6 +66,8 @@ model User {
   posts         Post[]
 
   @@index([createdAt], map: "idx_user_created_at")
+  @@index([role], map: "idx_user_role")
+  @@index([isActive], map: "idx_user_active")
 }
 
 model Profile {

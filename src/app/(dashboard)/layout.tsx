@@ -19,11 +19,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const user = session.user;
+  const user = session.user as typeof session.user & { role?: string };
 
   return (
     <div className="flex min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
-      <Sidebar userName={user.name ?? user.email} />
+      <Sidebar userName={user.name ?? user.email} userRole={user.role} />
       <div className="flex min-h-screen flex-1 flex-col md:ml-60">
         {/* Header */}
         <header className="hidden items-center justify-between border-b border-zinc-200 bg-white px-6 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 md:flex">
