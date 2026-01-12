@@ -91,10 +91,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-# Install Prisma CLI for migrations (use specific version to avoid Prisma 7)
+# Install Prisma CLI for migrations and required dependencies for seeding
 # Install without npm prefix to ensure it's in PATH
 USER root
 RUN npm install -g prisma@6.3.1 --force && \
+    npm install bcryptjs tsx && \
     which prisma && \
     prisma --version
 

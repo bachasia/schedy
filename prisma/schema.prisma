@@ -62,8 +62,9 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  profiles      Profile[]
-  posts         Post[]
+  profiles            Profile[]
+  posts               Post[]
+  assignedProfiles    ProfileAssignment[] // Profiles assigned to this manager
 
   @@index([createdAt], map: "idx_user_created_at")
   @@index([role], map: "idx_user_role")
@@ -86,8 +87,9 @@ model Profile {
   updatedAt        DateTime  @updatedAt
 
   // Relations
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  posts Post[]
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts       Post[]
+  assignments ProfileAssignment[] // Managers who can access this profile
 
   @@index([userId], map: "idx_profile_user_id")
   @@index([platform, userId], map: "idx_profile_platform_user")
@@ -124,6 +126,24 @@ model Post {
   @@index([platform, status], map: "idx_post_platform_status")
   @@index([groupId], map: "idx_post_group_id")
   @@unique([platform, platformPostId], map: "ux_post_platform_post_id")
+}
+
+/// Assignment of profiles to managers for access control
+model ProfileAssignment {
+  id         String   @id @default(cuid())
+  managerId  String   // The manager user who gets access
+  profileId  String   // The profile being assigned
+  assignedBy String?  // Admin who made the assignment
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  manager User    @relation(fields: [managerId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([managerId, profileId], map: "ux_profile_assignment")
+  @@index([managerId], map: "idx_assignment_manager")
+  @@index([profileId], map: "idx_assignment_profile")
 }
 
 model OAuthState {
