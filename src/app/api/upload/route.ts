@@ -23,8 +23,6 @@ const uploadSchema = z.object({
 // Configure route segment for large uploads
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds timeout for large uploads
-
-// Increase body size limit for this route
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
@@ -37,16 +35,17 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id;
 
-    // Parse form data with streaming to handle large files
+    // Parse form data - Next.js handles streaming automatically
     let formData: FormData;
     try {
       formData = await request.formData();
-    } catch (parseError) {
+    } catch (parseError: any) {
       console.error("FormData parse error:", parseError);
       return NextResponse.json(
         {
           error:
             "Failed to parse form data. File might be too large or corrupt.",
+          details: parseError?.message,
         },
         { status: 400 },
       );
