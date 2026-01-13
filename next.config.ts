@@ -6,10 +6,6 @@ const nextConfig: NextConfig = {
   // Disable source maps in production to save memory
   productionBrowserSourceMaps: false,
 
-  // Increase body size limit for uploads (100MB for videos)
-  // @ts-ignore - this is a valid Next.js config option
-  middlewareClientMaxBodySize: "100mb",
-
   // Optimize build performance and reduce memory usage
   experimental: {
     optimizePackageImports: [
@@ -22,6 +18,10 @@ const nextConfig: NextConfig = {
     ],
     // Disable webpack build workers to reduce memory usage (important for VPS 2GB RAM)
     webpackBuildWorker: false,
+    // Increase body size limit for API routes and server actions (100MB for videos)
+    serverActions: {
+      bodySizeLimit: "100mb",
+    },
   },
 
   // Mark Bull and related packages as external (server-only)
