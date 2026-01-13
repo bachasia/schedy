@@ -9,9 +9,11 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserFormDialog } from "@/components/admin/UserFormDialog";
+import { ProfileAssignmentDialog } from "@/components/admin/ProfileAssignmentDialog";
 import { format } from "date-fns";
 
 interface User {
@@ -35,6 +37,9 @@ export default function UsersPageClient() {
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [selectedUserForProfiles, setSelectedUserForProfiles] =
+    useState<User | null>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -73,8 +78,14 @@ export default function UsersPageClient() {
     setIsDialogOpen(true);
   };
 
-  const handleSuccess = () => {
-    setIsDialogOpen(false);
+  const handleAssignProfiles = (user: User) => {
+    setSelectedUserForProfiles(user);
+    setIsProfileDialogOpen(true);
+  };
+
+  const handleProfileAssignSuccess = () => {
+    setIsProfileDialogOpen(false);
+    // Optionally refresh users list to show updated counts
     fetchUsers();
   };
 
@@ -182,13 +193,12 @@ export default function UsersPageClient() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                          user.role === "ADMIN"
-                            ? "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
-                            : user.role === "MANAGER"
-                              ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
-                              : "bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-800/50 dark:text-zinc-300 dark:border-zinc-700"
-                        }`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${user.role === "ADMIN"
+                          ? "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
+                          : user.role === "MANAGER"
+                            ? "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+                            : "bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-800/50 dark:text-zinc-300 dark:border-zinc-700"
+                          }`}
                       >
                         {user.role === "ADMIN" && (
                           <Shield className="mr-1 h-3 w-3" />
@@ -219,9 +229,21 @@ export default function UsersPageClient() {
                           size="sm"
                           onClick={() => handleEditUser(user)}
                           className="h-8 w-8 p-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+                          title="Edit user"
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
+                        {(user.role === "MANAGER" || user.role === "EMPLOYEE") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAssignProfiles(user)}
+                            className="h-8 w-8 p-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+                            title="Assign profiles"
+                          >
+                            <UserCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -235,8 +257,18 @@ export default function UsersPageClient() {
       <UserFormDialog
         open={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        onSuccess={handleSuccess}
+        onSuccess={() => {
+          setIsDialogOpen(false);
+          fetchUsers();
+        }}
         user={selectedUser}
+      />
+
+      <ProfileAssignmentDialog
+        open={isProfileDialogOpen}
+        onClose={() => setIsProfileDialogOpen(false)}
+        onSuccess={handleProfileAssignSuccess}
+        user={selectedUserForProfiles}
       />
     </div>
   );

@@ -150,9 +150,24 @@ export async function canAccessProfile(profileId: string): Promise<boolean> {
 
   if (!profile) return false;
 
-  // EMPLOYEE can only access their own profiles
+  // EMPLOYEE can access their own profiles or assigned profiles
   if (currentUser.role === Role.EMPLOYEE) {
-    return profile.userId === currentUser.id;
+    // Check if it's their own profile
+    if (profile.userId === currentUser.id) {
+      return true;
+    }
+
+    // Check if the profile is assigned to them
+    const assignment = await (prisma as any).profileAssignment.findUnique({
+      where: {
+        ux_profile_assignment: {
+          managerId: currentUser.id, // Note: managerId field is used for both MANAGER and EMPLOYEE
+          profileId: profileId,
+        },
+      },
+    });
+
+    return !!assignment;
   }
 
   // MANAGER can access profiles they own or are assigned to them
@@ -203,13 +218,23 @@ export async function getAccessibleProfileIds(): Promise<string[]> {
     return profiles.map((p) => p.id);
   }
 
-  // EMPLOYEE can only access their own profiles
+  // EMPLOYEE can access their own profiles and assigned profiles
   if (currentUser.role === Role.EMPLOYEE) {
-    const profiles = await prisma.profile.findMany({
-      where: { userId: currentUser.id },
-      select: { id: true },
-    });
-    return profiles.map((p) => p.id);
+    const [ownProfiles, assignedProfiles] = await Promise.all([
+      prisma.profile.findMany({
+        where: { userId: currentUser.id },
+        select: { id: true },
+      }),
+      (prisma as any).profileAssignment.findMany({
+        where: { managerId: currentUser.id },
+        select: { profileId: true },
+      }),
+    ]);
+
+    const ownProfileIds = ownProfiles.map((p) => p.id);
+    const assignedProfileIds = assignedProfiles.map((a: any) => a.profileId);
+
+    return [...new Set([...ownProfileIds, ...assignedProfileIds])];
   }
 
   // MANAGER can access their own profiles and assigned profiles
