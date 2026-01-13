@@ -21,10 +21,28 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profiles = await prisma.profile.findMany({
-    where: { userId: session.user.id },
-    orderBy: { updatedAt: "desc" },
-  });
+  const userId = session.user.id;
+  const userRole = (session.user as any).role;
+
+  let profiles;
+
+  if (userRole === "EMPLOYEE") {
+    // For EMPLOYEE: Get profiles assigned to them via ProfileAssignment
+    const assignments = await (prisma as any).profileAssignment.findMany({
+      where: { managerId: userId },
+      include: {
+        profile: true,
+      },
+    });
+
+    profiles = assignments.map((assignment: any) => assignment.profile);
+  } else {
+    // For ADMIN/MANAGER: Get all profiles they own
+    profiles = await prisma.profile.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+    });
+  }
 
   return NextResponse.json({ profiles });
 }
