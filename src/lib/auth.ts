@@ -81,17 +81,17 @@ export const authConfig: NextAuthConfig = {
       if (token?.userId && session.user) {
         (session.user as typeof session.user & {
           id: string;
-          role: string;
+          role: "ADMIN" | "MANAGER" | "EMPLOYEE";
           isActive: boolean;
         }).id = token.userId as string;
         (session.user as typeof session.user & {
           id: string;
-          role: string;
+          role: "ADMIN" | "MANAGER" | "EMPLOYEE";
           isActive: boolean;
-        }).role = token.role as string;
+        }).role = token.role as "ADMIN" | "MANAGER" | "EMPLOYEE";
         (session.user as typeof session.user & {
           id: string;
-          role: string;
+          role: "ADMIN" | "MANAGER" | "EMPLOYEE";
           isActive: boolean;
         }).isActive = token.isActive as boolean;
       }
