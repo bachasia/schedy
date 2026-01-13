@@ -18,11 +18,13 @@ const nextConfig: NextConfig = {
     ],
     // Disable webpack build workers to reduce memory usage (important for VPS 2GB RAM)
     webpackBuildWorker: false,
-    // Increase body size limit for API routes and server actions (100MB for videos)
-    // In Next.js 15+, this applies to both Server Actions AND API Routes
+    // Increase body size limit for Server Actions (100MB for videos)
     serverActions: {
       bodySizeLimit: "100mb",
     },
+    // Increase body size limit for API routes when middleware is in use
+    // This eliminates the "Request body exceeded 10MB" warning
+    middlewareClientMaxBodySize: "100mb",
     // Increase proxy timeout for large file uploads
     proxyTimeout: 300000, // 5 minutes in milliseconds
   },
