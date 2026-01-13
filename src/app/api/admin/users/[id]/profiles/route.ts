@@ -15,13 +15,13 @@ const profileIdsSchema = z.object({
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         // Only ADMIN can manage profile assignments
         await requireRole([Role.ADMIN]);
 
-        const userId = params.id;
+        const { id: userId } = await params;
 
         // Verify user exists
         const user = await prisma.user.findUnique({
@@ -83,13 +83,13 @@ export async function GET(
  */
 export async function POST(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         // Only ADMIN can manage profile assignments
         const currentUser = await requireRole([Role.ADMIN]);
 
-        const userId = params.id;
+        const { id: userId } = await params;
 
         // Verify user exists
         const user = await prisma.user.findUnique({
@@ -140,7 +140,7 @@ export async function POST(
             profileIds.map((profileId) =>
                 (prisma as any).profileAssignment.upsert({
                     where: {
-                        ux_profile_assignment: {
+                        managerId_profileId: {
                             managerId: userId,
                             profileId: profileId,
                         },
@@ -177,13 +177,13 @@ export async function POST(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         // Only ADMIN can manage profile assignments
         await requireRole([Role.ADMIN]);
 
-        const userId = params.id;
+        const { id: userId } = await params;
 
         // Verify user exists
         const user = await prisma.user.findUnique({

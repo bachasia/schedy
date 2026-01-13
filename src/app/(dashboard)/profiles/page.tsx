@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import {
   BadgeCheck,
   Clock,
@@ -78,6 +79,7 @@ function PlatformIcon({ platform }: { platform: Platform }) {
 }
 
 export default function ProfilesPage() {
+  const { data: session } = useSession();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [platformFilter, setPlatformFilter] = useState<Platform | "ALL">(
     "ALL",
@@ -90,6 +92,9 @@ export default function ProfilesPage() {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [tokenStatuses, setTokenStatuses] = useState<Record<string, TokenStatus>>({});
   const [checkingToken, setCheckingToken] = useState<string | null>(null);
+
+  // Check if user can add profiles (ADMIN or MANAGER only)
+  const canAddProfile = session?.user?.role === "ADMIN" || session?.user?.role === "MANAGER";
 
   const filteredProfiles = useMemo(() => {
     if (platformFilter === "ALL") return profiles;
@@ -156,7 +161,7 @@ export default function ProfilesPage() {
     try {
       const res = await fetch(`/api/profiles/${profileId}/check-token`);
       const data = await res.json();
-      
+
       if (res.ok && data.tokenStatus) {
         setTokenStatuses(prev => ({
           ...prev,
@@ -186,10 +191,12 @@ export default function ProfilesPage() {
             <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
             Refresh
           </Button>
-          <Button size="sm" onClick={handleAddProfile}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Add Profile
-          </Button>
+          {canAddProfile && (
+            <Button size="sm" onClick={handleAddProfile}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add Profile
+            </Button>
+          )}
         </div>
       </div>
 
@@ -232,13 +239,16 @@ export default function ProfilesPage() {
           <BadgeCheck className="mb-2 h-5 w-5 text-zinc-400" />
           <p className="mb-1.5 font-medium text-sm">No profiles yet</p>
           <p className="mb-3 max-w-sm text-xs text-zinc-500">
-            Connect your social media profiles to start scheduling and
-            publishing content.
+            {canAddProfile
+              ? "Connect your social media profiles to start scheduling and publishing content."
+              : "No profiles have been assigned to you yet. Contact your administrator to get access to social media profiles."}
           </p>
-          <Button size="sm" onClick={handleAddProfile}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Add your first profile
-          </Button>
+          {canAddProfile && (
+            <Button size="sm" onClick={handleAddProfile}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add your first profile
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Search, Check } from "lucide-react";
+import { X, Search, Check, CheckSquare, Square, Facebook, Instagram, Twitter, Youtube, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Profile {
@@ -37,6 +37,14 @@ const PLATFORM_COLORS = {
     TWITTER:
         "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
     YOUTUBE: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+};
+
+const PLATFORM_ICONS = {
+    FACEBOOK: Facebook,
+    INSTAGRAM: Instagram,
+    TIKTOK: Music,
+    TWITTER: Twitter,
+    YOUTUBE: Youtube,
 };
 
 export function ProfileAssignmentDialog({
@@ -105,6 +113,15 @@ export function ProfileAssignmentDialog({
             newSelected.add(profileId);
         }
         setSelectedProfileIds(newSelected);
+    };
+
+    const handleSelectAll = () => {
+        const allIds = new Set(filteredProfiles.map((p) => p.id));
+        setSelectedProfileIds(allIds);
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedProfileIds(new Set());
     };
 
     const handleSave = async () => {
@@ -206,8 +223,8 @@ export function ProfileAssignmentDialog({
                     </button>
                 </div>
 
-                {/* Search */}
-                <div className="mb-4">
+                {/* Search and Bulk Actions */}
+                <div className="mb-4 space-y-3">
                     <div className="relative">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
                         <input
@@ -217,6 +234,30 @@ export function ProfileAssignmentDialog({
                             onChange={(e) => setSearch(e.target.value)}
                             className="h-9 w-full rounded-md border border-zinc-200 bg-transparent pl-9 pr-4 text-sm outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 dark:border-zinc-800 dark:text-zinc-50"
                         />
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSelectAll}
+                            disabled={loading || filteredProfiles.length === 0}
+                            className="flex items-center gap-1.5"
+                        >
+                            <CheckSquare className="h-3.5 w-3.5" />
+                            Select All
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDeselectAll}
+                            disabled={loading || selectedProfileIds.size === 0}
+                            className="flex items-center gap-1.5"
+                        >
+                            <Square className="h-3.5 w-3.5" />
+                            Deselect All
+                        </Button>
                     </div>
                 </div>
 
@@ -235,9 +276,15 @@ export function ProfileAssignmentDialog({
                             {Object.entries(profilesByPlatform).map(
                                 ([platform, profiles]) => (
                                     <div key={platform} className="p-4">
-                                        <h3 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                            {platform}
-                                        </h3>
+                                        <div className="mb-3 flex items-center gap-2">
+                                            {(() => {
+                                                const Icon = PLATFORM_ICONS[platform as keyof typeof PLATFORM_ICONS];
+                                                return Icon ? <Icon className="h-4 w-4 text-zinc-600 dark:text-zinc-400" /> : null;
+                                            })()}
+                                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                                                {platform}
+                                            </h3>
+                                        </div>
                                         <div className="space-y-2">
                                             {profiles.map((profile) => (
                                                 <label
