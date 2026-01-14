@@ -96,6 +96,9 @@ export default function ProfilesPage() {
   // Check if user can add profiles (ADMIN or MANAGER only)
   const canAddProfile = session?.user?.role === "ADMIN" || session?.user?.role === "MANAGER";
 
+  // Check if user can manage (edit/delete) profiles (ADMIN or MANAGER only)
+  const canManageProfiles = session?.user?.role === "ADMIN" || session?.user?.role === "MANAGER";
+
   const filteredProfiles = useMemo(() => {
     if (platformFilter === "ALL") return profiles;
     return profiles.filter((p) => p.platform === platformFilter);
@@ -361,26 +364,28 @@ export default function ProfilesPage() {
                     )}
                   </Button>
                 </div>
-                <div className="flex gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 flex-1 px-2 text-xs"
-                    onClick={() => handleEdit(profile)}
-                  >
-                    <Pencil className="mr-1 h-3 w-3" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 flex-1 px-2 text-xs"
-                    onClick={() => handleDelete(profile)}
-                  >
-                    <Unplug className="mr-1 h-3 w-3" />
-                    Delete
-                  </Button>
-                </div>
+                {canManageProfiles && (
+                  <div className="flex gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 flex-1 px-2 text-xs"
+                      onClick={() => handleEdit(profile)}
+                    >
+                      <Pencil className="mr-1 h-3 w-3" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 flex-1 px-2 text-xs"
+                      onClick={() => handleDelete(profile)}
+                    >
+                      <Unplug className="mr-1 h-3 w-3" />
+                      Delete
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
