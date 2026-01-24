@@ -24,20 +24,53 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const posts = await prisma.post.findMany({
-    where: { userId: session.user.id },
-    include: {
-      profile: {
-        select: {
-          id: true,
-          name: true,
-          platform: true,
-          platformUsername: true,
+  const userId = session.user.id;
+  const userRole = (session.user as any).role;
+
+  let posts;
+
+  if (userRole === "EMPLOYEE") {
+    // For EMPLOYEE: Get posts for profiles assigned to them via ProfileAssignment
+    const assignments = await (prisma as any).profileAssignment.findMany({
+      where: { managerId: userId },
+      select: { profileId: true },
+    });
+
+    const assignedProfileIds = assignments.map((a: any) => a.profileId);
+
+    posts = await prisma.post.findMany({
+      where: {
+        profileId: { in: assignedProfileIds }
+      },
+      include: {
+        profile: {
+          select: {
+            id: true,
+            name: true,
+            platform: true,
+            platformUsername: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
+  } else {
+    // For ADMIN/MANAGER: Get all posts they created
+    posts = await prisma.post.findMany({
+      where: { userId: userId },
+      include: {
+        profile: {
+          select: {
+            id: true,
+            name: true,
+            platform: true,
+            platformUsername: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
 
   // Parse mediaUrls from comma-separated string to array for each post
   const postsWithParsedMedia = posts.map(post => ({
@@ -92,17 +125,39 @@ export async function POST(request: Request) {
       scheduledAt
     });
 
-    // Verify all profiles belong to the user
+    // Verify all profiles are accessible to the user
     console.log("[API] POST /api/posts - Fetching profiles...");
-    const profiles = await prisma.profile.findMany({
-      where: {
-        id: { in: profileIds },
-        userId: userId,
-      },
-    });
+    const userRole = (session.user as any).role;
+    let profiles;
+
+    if (userRole === "EMPLOYEE") {
+      // For EMPLOYEE: Check if profiles are assigned to them via ProfileAssignment
+      const assignments = await (prisma as any).profileAssignment.findMany({
+        where: {
+          managerId: userId,
+          profileId: { in: profileIds },
+        },
+        include: {
+          profile: true,
+        },
+      });
+
+      profiles = assignments.map((a: any) => a.profile);
+    } else {
+      // For ADMIN/MANAGER: Check direct ownership
+      profiles = await prisma.profile.findMany({
+        where: {
+          id: { in: profileIds },
+          userId: userId,
+        },
+      });
+    }
 
     if (profiles.length !== profileIds.length) {
       console.log("[API] POST /api/posts - Profile count mismatch:", profiles.length, "!=", profileIds.length);
+      console.log("[API] POST /api/posts - User role:", userRole);
+      console.log("[API] POST /api/posts - Requested profileIds:", profileIds);
+      console.log("[API] POST /api/posts - Found profiles:", profiles.map((p: any) => p.id));
       return NextResponse.json(
         { error: "One or more profiles not found or unauthorized" },
         { status: 403 },
@@ -119,7 +174,7 @@ export async function POST(request: Request) {
 
     // Create a post for each profile
     const posts = await Promise.all(
-      profiles.map((profile) => {
+      profiles.map((profile: any) => {
         // Determine post format: SHORT for YouTube when original is REEL, otherwise use original format
         let finalPostFormat = (postFormat || "POST") as "POST" | "REEL" | "SHORT" | "STORY";
 
